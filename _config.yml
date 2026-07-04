@@ -1,6 +1,8 @@
 title: AMEY x ORBITAL OPS
 url: https://ameycodes.github.io
 baseurl: ""
+timezone: Asia/Kolkata
+future: true
 markdown: kramdown
 highlighter: rouge
 permalink: /blog/:title/
