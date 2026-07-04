@@ -7,12 +7,12 @@
 <meta name="theme-color" content="#0A0D14">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ameycodes.github.io/">
-<meta property="og:title" content="AMEY // ORBITAL OPS">
+<meta property="og:title" content="AMEY x ORBITAL OPS">
 <meta property="og:description" content="Backend · DevOps · AI Agents. A portfolio built as a mission-control console — open the ship terminal and try 'help'.">
 <meta name="color-scheme" content="dark">
 <link rel="canonical" href="https://ameycodes.github.io/">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
-<title>AMEY // ORBITAL OPS</title>
+<title>AMEY x ORBITAL OPS</title>
 <style>
   @font-face {
     font-family: 'Chakra Petch';
@@ -741,7 +741,7 @@
         <p id="sys-desc">Sweep the radar to select a subsystem. All units report nominal. Mostly.</p>
         <div class="meter"><i id="sys-meter"></i></div>
         <div id="sys-pct">— %</div>
-        <div id="sys-hint">hover / tap a node on the radar</div>
+        <div id="sys-hint">hover / tap a node · tap the sun to light every orbit</div>
       </div>
     </div>
   </section>
@@ -779,7 +779,7 @@
       <div class="log-entry reveal">
         <span class="stamp">SIDE QUEST · ONGOING</span>
         <h3>Gaming content creator — AmeysGamezone</h3>
-        <p>Part-time gaming content creator on YouTube. When not deploying pipelines: deploying headshots. Tune in at <a href="https://www.youtube.com/@ameysgamezone7801" target="_blank" rel="noopener">@AmeysGamezone</a>.</p>
+        <p>Part-time gaming content creator on YouTube. When not deploying pipelines: deploying killshots. Tune in at <a href="https://www.youtube.com/@ameysgamezone7801" target="_blank" rel="noopener">@AmeysGamezone</a>.</p>
       </div>
     </div>
   </section>
@@ -982,6 +982,7 @@
   var sysMeter = document.getElementById('sys-meter');
   var sysPct = document.getElementById('sys-pct');
   var active = -1, rot = 0, RW, nodePos = [];
+  var showAll = false; /* click the sun to illuminate every skill label */
 
   function sizeRadar() {
     var w = radar.clientWidth || radar.parentElement.clientWidth;
@@ -1001,10 +1002,17 @@
       var rr = R * RING_R[ring];
       rcx.beginPath();
       rcx.arc(c, c, rr, 0, 6.2832);
-      rcx.strokeStyle = 'rgba(51,64,92,' + (ring === 2 ? 0.9 : 0.45) + ')';
+      if (showAll) {
+        rcx.strokeStyle = 'rgba(143,134,255,0.65)';
+        rcx.shadowColor = 'rgba(143,134,255,0.6)';
+        rcx.shadowBlur = 10 * devicePixelRatio;
+      } else {
+        rcx.strokeStyle = 'rgba(51,64,92,' + (ring === 2 ? 0.9 : 0.45) + ')';
+      }
       rcx.stroke();
+      rcx.shadowBlur = 0;
       rcx.font = (9 * devicePixelRatio) + 'px ui-monospace, Consolas, monospace';
-      rcx.fillStyle = 'rgba(124,135,160,0.55)';
+      rcx.fillStyle = showAll ? 'rgba(255,217,168,0.9)' : 'rgba(124,135,160,0.55)';
       rcx.fillText(RING_LABELS[ring], c + 5 * devicePixelRatio, c - rr - 5 * devicePixelRatio);
     }
     rcx.strokeStyle = 'rgba(51,64,92,0.35)';
@@ -1028,10 +1036,10 @@
     }
 
     rcx.beginPath();
-    rcx.arc(c, c, RW * 0.035, 0, 6.2832);
-    rcx.fillStyle = '#FFB25E';
-    rcx.shadowColor = 'rgba(255,178,94,0.8)';
-    rcx.shadowBlur = 18 * devicePixelRatio;
+    rcx.arc(c, c, RW * (showAll ? 0.042 : 0.035), 0, 6.2832);
+    rcx.fillStyle = showAll ? '#FFD9A8' : '#FFB25E';
+    rcx.shadowColor = 'rgba(255,178,94,' + (showAll ? 1 : 0.8) + ')';
+    rcx.shadowBlur = (showAll ? 34 : 18) * devicePixelRatio;
     rcx.fill();
     rcx.shadowBlur = 0;
 
@@ -1052,14 +1060,15 @@
         rcx.stroke();
       }
       rcx.beginPath();
-      rcx.arc(x, y, (isA ? 7 : 4.5) * devicePixelRatio, 0, 6.2832);
-      rcx.fillStyle = isA ? '#FFB25E' : '#8F86FF';
+      rcx.arc(x, y, (isA ? 7 : showAll ? 5.5 : 4.5) * devicePixelRatio, 0, 6.2832);
+      rcx.fillStyle = isA ? '#FFB25E' : showAll ? '#B0A9FF' : '#8F86FF';
       if (isA) { rcx.shadowColor = 'rgba(255,178,94,0.9)'; rcx.shadowBlur = 14 * devicePixelRatio; }
+      else if (showAll) { rcx.shadowColor = 'rgba(143,134,255,0.7)'; rcx.shadowBlur = 8 * devicePixelRatio; }
       rcx.fill();
       rcx.shadowBlur = 0;
-      if (isA) {
-        rcx.font = (11 * devicePixelRatio) + 'px ui-monospace, Consolas, monospace';
-        rcx.fillStyle = '#FFD9A8';
+      if (isA || showAll) {
+        rcx.font = ((isA ? 11 : 10) * devicePixelRatio) + 'px ui-monospace, Consolas, monospace';
+        rcx.fillStyle = isA ? '#FFD9A8' : 'rgba(255,217,168,0.8)';
         var tx = x + 12 * devicePixelRatio;
         if (tx + rcx.measureText(SKILLS[i].n).width > RW) tx = x - 12 * devicePixelRatio - rcx.measureText(SKILLS[i].n).width;
         rcx.fillText(SKILLS[i].n, tx, y + 4 * devicePixelRatio);
@@ -1091,7 +1100,17 @@
     }
   }
   radar.addEventListener('mousemove', pickNode);
-  radar.addEventListener('click', pickNode);
+  radar.addEventListener('click', function (e) {
+    var rect = radar.getBoundingClientRect();
+    var px = (e.clientX - rect.left) * devicePixelRatio;
+    var py = (e.clientY - rect.top) * devicePixelRatio;
+    var dx = px - RW / 2, dy = py - RW / 2;
+    if (Math.sqrt(dx * dx + dy * dy) < RW * 0.07) {
+      showAll = !showAll;
+      return;
+    }
+    pickNode(e);
+  });
 
   /* ================= SHIP TERMINAL ================= */
   var termBody = document.getElementById('term-body');
@@ -1208,7 +1227,7 @@
     },
     youtube: function () {
       tprint('switching to the entertainment deck ...', 't-ok');
-      tprint('  ▶ <a href="https://www.youtube.com/@ameysgamezone7801" target="_blank" rel="noopener">youtube.com/@ameysgamezone7801</a> — deploying headshots since always.', 't-amber', true);
+      tprint('  ▶ <a href="https://www.youtube.com/@ameysgamezone7801" target="_blank" rel="noopener">youtube.com/@ameysgamezone7801</a> — deploying killshots since always.', 't-amber', true);
       window.open('https://www.youtube.com/@ameysgamezone7801', '_blank', 'noopener');
     },
     contact: function () {
