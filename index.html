@@ -1043,7 +1043,7 @@
       x: fromLeft ? -0.06 * W : 1.06 * W,
       y: Math.random() * H * 0.45,
       ux: ux, uy: uy,
-      spd: (0.30 + Math.random() * 0.22) * devicePixelRatio, /* px per ms */
+      spd: (0.18 + Math.random() * 0.12) * devicePixelRatio, /* px per ms */
       last: now
     };
   }
@@ -1078,6 +1078,226 @@
     }
   }
 
+  /* a burning asteroid cluster blazes past ~30s in, then at long random intervals */
+  var asteroid = null;
+  var nextAsteroidAt = performance.now() + 30000;
+  function makeRock(r, x, y, spd) {
+    var pts = [];
+    for (var i = 0; i < 12; i++) pts.push(0.72 + Math.random() * 0.42);
+    var craters = [];
+    var nc = 2 + Math.floor(Math.random() * 3);
+    for (var c = 0; c < nc; c++) {
+      craters.push({ a: Math.random() * 6.2832, d: 0.15 + Math.random() * 0.5, cr: 0.10 + Math.random() * 0.16 });
+    }
+    var molten = [];
+    var nm = 1 + Math.floor(Math.random() * 2);
+    for (var h = 0; h < nm; h++) {
+      molten.push({ a: Math.random() * 6.2832, d: 0.2 + Math.random() * 0.45, hr: 0.08 + Math.random() * 0.10, ph: Math.random() * 6.2832 });
+    }
+    return {
+      r: r, x: x, y: y, spd: spd, pts: pts,
+      craters: craters, molten: molten,
+      rot: Math.random() * 6.2832,
+      rotSpd: (Math.random() < 0.5 ? -1 : 1) * (0.0008 + Math.random() * 0.001)
+    };
+  }
+  function spawnAsteroid(now) {
+    var fromLeft = Math.random() < 0.5;
+    var ux = fromLeft ? 1 : -1;
+    var uy = (Math.random() - 0.5) * 0.35;
+    var m = Math.sqrt(ux * ux + uy * uy);
+    ux /= m; uy /= m;
+    var px = -uy, py = ux; /* perpendicular, for scattering the debris */
+    var spd = (0.10 + Math.random() * 0.05) * devicePixelRatio;
+    var mainR = (16 + Math.random() * 8) * devicePixelRatio;
+    var bx = fromLeft ? -mainR * 3 : W + mainR * 3;
+    var by = H * (0.15 + Math.random() * 0.6);
+    var rocks = [makeRock(mainR, bx, by, spd)];
+    var minis = 2 + (Math.random() < 0.5 ? 1 : 0);
+    for (var i = 0; i < minis; i++) {
+      var back = (50 + Math.random() * 110) * devicePixelRatio;
+      var side = (Math.random() < 0.5 ? -1 : 1) * (26 + Math.random() * 60) * devicePixelRatio;
+      rocks.push(makeRock(
+        mainR * (0.28 + Math.random() * 0.22),
+        bx - ux * back + px * side,
+        by - uy * back + py * side,
+        spd * (0.94 + Math.random() * 0.1)
+      ));
+    }
+    asteroid = { ux: ux, uy: uy, rocks: rocks, embers: [], last: now };
+  }
+  function drawAsteroid(now) {
+    var A = asteroid;
+    var dt = Math.min(now - A.last, 50);
+    A.last = now;
+    var i, k, r;
+
+    /* move rocks and shed embers from their trailing edges */
+    for (i = 0; i < A.rocks.length; i++) {
+      r = A.rocks[i];
+      r.x += A.ux * r.spd * dt;
+      r.y += A.uy * r.spd * dt;
+      r.rot += r.rotSpd * dt;
+      var emit = (i === 0 ? 0.14 : 0.03) * dt;
+      while (emit > 0) {
+        if (Math.random() < emit) {
+          A.embers.push({
+            x: r.x - A.ux * r.r * 0.7 + (Math.random() - 0.5) * r.r,
+            y: r.y - A.uy * r.r * 0.7 + (Math.random() - 0.5) * r.r,
+            vx: -A.ux * r.spd * (0.25 + Math.random() * 0.35) + (Math.random() - 0.5) * 0.02 * devicePixelRatio,
+            vy: -A.uy * r.spd * (0.25 + Math.random() * 0.35) + (Math.random() - 0.5) * 0.02 * devicePixelRatio,
+            r: (0.8 + Math.random() * 1.8) * devicePixelRatio * (i === 0 ? 1.4 : 1),
+            born: now,
+            life: 450 + Math.random() * 500
+          });
+        }
+        emit -= 1;
+      }
+    }
+    if (A.embers.length > 160) A.embers.splice(0, A.embers.length - 160);
+
+    /* flames and embers, drawn additively so they bloom */
+    cx.save();
+    cx.globalCompositeOperation = 'lighter';
+    var pxn = -A.uy, pyn = A.ux; /* perpendicular to travel */
+    for (i = 0; i < A.rocks.length; i++) {
+      r = A.rocks[i];
+      /* fire corona wrapping the whole body */
+      var cor = 0.16 + 0.06 * Math.sin(now / 70 + i * 1.7);
+      var ccx = r.x - A.ux * r.r * 0.2, ccy = r.y - A.uy * r.r * 0.2;
+      var cg = cx.createRadialGradient(ccx, ccy, r.r * 0.3, ccx, ccy, r.r * 2.1);
+      cg.addColorStop(0, 'rgba(255,190,110,' + cor + ')');
+      cg.addColorStop(0.55, 'rgba(255,120,60,' + (cor * 0.55) + ')');
+      cg.addColorStop(1, 'rgba(255,90,50,0)');
+      cx.fillStyle = cg;
+      cx.beginPath();
+      cx.arc(ccx, ccy, r.r * 2.1, 0, 6.2832);
+      cx.fill();
+
+      /* fanned flame tongues, each flickering out of phase */
+      var tongues = i === 0 ? 3 : 2;
+      for (var j = 0; j < tongues; j++) {
+        var spread = j - (tongues - 1) / 2;
+        var ang = spread * 0.22;
+        var dxv = -(A.ux * Math.cos(ang) - A.uy * Math.sin(ang));
+        var dyv = -(A.ux * Math.sin(ang) + A.uy * Math.cos(ang));
+        var sx = r.x + pxn * spread * r.r * 0.42;
+        var sy = r.y + pyn * spread * r.r * 0.42;
+        var tl = r.r * (4.2 + 1.6 * Math.sin(now / 63 + j * 2.4 + i * 1.3) + Math.random() * 0.5);
+        var fx = sx + dxv * tl, fy = sy + dyv * tl;
+        var fg = cx.createLinearGradient(sx, sy, fx, fy);
+        fg.addColorStop(0, 'rgba(255,236,200,' + (spread === 0 ? 0.5 : 0.3) + ')');
+        fg.addColorStop(0.25, 'rgba(255,178,94,' + (spread === 0 ? 0.36 : 0.22) + ')');
+        fg.addColorStop(0.6, 'rgba(255,110,70,0.15)');
+        fg.addColorStop(1, 'rgba(255,80,60,0)');
+        cx.strokeStyle = fg;
+        cx.lineWidth = r.r * (spread === 0 ? 1.05 : 0.6);
+        cx.lineCap = 'round';
+        cx.beginPath();
+        cx.moveTo(sx, sy);
+        cx.lineTo(fx, fy);
+        cx.stroke();
+      }
+    }
+    for (i = A.embers.length - 1; i >= 0; i--) {
+      var e = A.embers[i];
+      var age = now - e.born;
+      if (age >= e.life) { A.embers.splice(i, 1); continue; }
+      e.x += e.vx * dt; e.y += e.vy * dt;
+      var t = age / e.life;
+      var al = 1 - t;
+      cx.fillStyle = t < 0.3
+        ? 'rgba(255,230,180,' + (0.85 * al) + ')'
+        : t < 0.65
+          ? 'rgba(255,150,80,' + (0.8 * al) + ')'
+          : 'rgba(255,90,60,' + (0.7 * al) + ')';
+      cx.beginPath();
+      cx.arc(e.x, e.y, e.r * (1 - t * 0.5), 0, 6.2832);
+      cx.fill();
+    }
+    cx.restore();
+
+    /* rock bodies over the fire, leading faces heat-soaked */
+    for (i = 0; i < A.rocks.length; i++) {
+      r = A.rocks[i];
+      cx.save();
+      cx.translate(r.x, r.y);
+      cx.rotate(r.rot);
+      cx.beginPath();
+      for (k = 0; k < r.pts.length; k++) {
+        var a = k * 6.2832 / r.pts.length;
+        var rr = r.r * r.pts[k];
+        if (k === 0) cx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+        else cx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+      }
+      cx.closePath();
+      cx.shadowColor = 'rgba(255,140,70,0.9)';
+      cx.shadowBlur = 22 * devicePixelRatio;
+      cx.fillStyle = '#1A2030';
+      cx.fill();
+      cx.shadowBlur = 0;
+      /* heat gradient on the side facing travel (direction rotated into local frame) */
+      var ca = Math.cos(r.rot), sa = Math.sin(r.rot);
+      var lx = (A.ux * ca + A.uy * sa) * r.r * 0.55;
+      var ly = (-A.ux * sa + A.uy * ca) * r.r * 0.55;
+      var hg = cx.createRadialGradient(lx, ly, 0, lx, ly, r.r * 1.5);
+      hg.addColorStop(0, 'rgba(255,190,120,0.6)');
+      hg.addColorStop(0.5, 'rgba(255,120,70,0.2)');
+      hg.addColorStop(1, 'rgba(255,120,70,0)');
+      cx.fillStyle = hg;
+      cx.fill();
+
+      /* craters — dark pits with a heat-lit rim on the fire side */
+      var heatAng = Math.atan2(ly, lx);
+      for (k = 0; k < r.craters.length; k++) {
+        var c2 = r.craters[k];
+        var cxp = Math.cos(c2.a) * c2.d * r.r;
+        var cyp = Math.sin(c2.a) * c2.d * r.r;
+        cx.beginPath();
+        cx.arc(cxp, cyp, c2.cr * r.r, 0, 6.2832);
+        cx.fillStyle = 'rgba(7,10,17,0.85)';
+        cx.fill();
+        cx.beginPath();
+        cx.arc(cxp, cyp, c2.cr * r.r * 0.92, heatAng - 1.1, heatAng + 1.1);
+        cx.strokeStyle = 'rgba(255,150,90,0.3)';
+        cx.lineWidth = devicePixelRatio;
+        cx.stroke();
+      }
+
+      /* molten holes — magma glowing through the crust, pulsing */
+      cx.globalCompositeOperation = 'lighter';
+      for (k = 0; k < r.molten.length; k++) {
+        var mh = r.molten[k];
+        var mx = Math.cos(mh.a) * mh.d * r.r;
+        var myy = Math.sin(mh.a) * mh.d * r.r;
+        var pulse = 0.45 + 0.3 * Math.sin(now / 140 + mh.ph);
+        var mg = cx.createRadialGradient(mx, myy, 0, mx, myy, mh.hr * r.r * 3);
+        mg.addColorStop(0, 'rgba(255,215,150,' + pulse + ')');
+        mg.addColorStop(0.35, 'rgba(255,140,70,' + (pulse * 0.6) + ')');
+        mg.addColorStop(1, 'rgba(255,100,60,0)');
+        cx.fillStyle = mg;
+        cx.beginPath();
+        cx.arc(mx, myy, mh.hr * r.r * 3, 0, 6.2832);
+        cx.fill();
+        cx.beginPath();
+        cx.arc(mx, myy, mh.hr * r.r, 0, 6.2832);
+        cx.fillStyle = 'rgba(255,235,190,' + (pulse + 0.25) + ')';
+        cx.fill();
+      }
+      cx.restore();
+    }
+
+    /* cull once the lead rock has left via its exit side */
+    var lead = A.rocks[0];
+    var off = lead.r * 8;
+    if ((A.ux > 0 && lead.x > W + off) ||
+        (A.ux < 0 && lead.x < -off) ||
+        lead.y < -H * 0.3 || lead.y > H * 1.3) {
+      asteroid = null;
+      nextAsteroidAt = now + 45000 + Math.random() * 45000;
+    }
+  }
+
   var frame = 0;
   function drawStars() {
     cx.clearRect(0, 0, W, H);
@@ -1101,6 +1321,8 @@
       var now = performance.now();
       if (!comet && now >= nextCometAt) spawnComet(now);
       if (comet) drawComet(now);
+      if (!asteroid && now >= nextAsteroidAt) spawnAsteroid(now);
+      if (asteroid) drawAsteroid(now);
       requestAnimationFrame(drawStars);
     }
   }
