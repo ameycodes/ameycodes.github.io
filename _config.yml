@@ -1,8 +1,16 @@
 title: AMEY x ORBITAL OPS
+description: Engineering notes transmitted from orbit — backend, DevOps, and AI agents.
 url: https://ameycodes.github.io
 baseurl: ""
 timezone: Asia/Kolkata
 future: true
+author:
+  name: Amey
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+feed:
+  path: feed.xml
 markdown: kramdown
 highlighter: rouge
 permalink: /blog/:title/
