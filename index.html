@@ -48,6 +48,18 @@
     --body: 'Segoe UI', system-ui, -apple-system, sans-serif;
   }
 
+  /* phosphor calibrations — swapped live by the terminal's "theme" command */
+  :root[data-theme="green"] {
+    --amber: #56E693;
+    --amber-hot: #BFF7D4;
+    --violet: #3BC98F;
+  }
+  :root[data-theme="violet"] {
+    --amber: #A99CFF;
+    --amber-hot: #DCD5FF;
+    --violet: #8F86FF;
+  }
+
   * { box-sizing: border-box; }
 
   html { scroll-behavior: smooth; }
@@ -984,6 +996,27 @@
   var active = -1, rot = 0, RW, nodePos = [];
   var showAll = false; /* click the sun to illuminate every skill label */
 
+  /* phosphor theme — the radar reads its accents from the CSS tokens */
+  var TH = {};
+  function hexToRgb(h) {
+    h = h.trim().replace('#', '');
+    return parseInt(h.substr(0, 2), 16) + ',' + parseInt(h.substr(2, 2), 16) + ',' + parseInt(h.substr(4, 2), 16);
+  }
+  function syncCanvasTheme() {
+    var cs = getComputedStyle(document.documentElement);
+    TH.a = cs.getPropertyValue('--amber').trim() || '#FFB25E';
+    TH.ah = cs.getPropertyValue('--amber-hot').trim() || '#FFD9A8';
+    TH.v = cs.getPropertyValue('--violet').trim() || '#8F86FF';
+    TH.aGlow = hexToRgb(TH.a);
+    TH.ahGlow = hexToRgb(TH.ah);
+    TH.vGlow = hexToRgb(TH.v);
+  }
+  try {
+    var savedTheme = localStorage.getItem('ops-theme');
+    if (savedTheme === 'green' || savedTheme === 'violet') document.documentElement.setAttribute('data-theme', savedTheme);
+  } catch (e) { /* default calibration */ }
+  syncCanvasTheme();
+
   function sizeRadar() {
     var w = radar.clientWidth || radar.parentElement.clientWidth;
     RW = w * devicePixelRatio;
@@ -1003,8 +1036,8 @@
       rcx.beginPath();
       rcx.arc(c, c, rr, 0, 6.2832);
       if (showAll) {
-        rcx.strokeStyle = 'rgba(143,134,255,0.65)';
-        rcx.shadowColor = 'rgba(143,134,255,0.6)';
+        rcx.strokeStyle = 'rgba(' + TH.vGlow + ',0.65)';
+        rcx.shadowColor = 'rgba(' + TH.vGlow + ',0.6)';
         rcx.shadowBlur = 10 * devicePixelRatio;
       } else {
         rcx.strokeStyle = 'rgba(51,64,92,' + (ring === 2 ? 0.9 : 0.45) + ')';
@@ -1012,7 +1045,7 @@
       rcx.stroke();
       rcx.shadowBlur = 0;
       rcx.font = (9 * devicePixelRatio) + 'px ui-monospace, Consolas, monospace';
-      rcx.fillStyle = showAll ? 'rgba(255,217,168,0.9)' : 'rgba(124,135,160,0.55)';
+      rcx.fillStyle = showAll ? 'rgba(' + TH.ahGlow + ',0.9)' : 'rgba(124,135,160,0.55)';
       rcx.fillText(RING_LABELS[ring], c + 5 * devicePixelRatio, c - rr - 5 * devicePixelRatio);
     }
     rcx.strokeStyle = 'rgba(51,64,92,0.35)';
@@ -1024,8 +1057,8 @@
       rcx.translate(c, c);
       rcx.rotate(rot * 2.2);
       var sw = rcx.createLinearGradient(0, 0, R, 0);
-      sw.addColorStop(0, 'rgba(255,178,94,0.10)');
-      sw.addColorStop(1, 'rgba(255,178,94,0)');
+      sw.addColorStop(0, 'rgba(' + TH.aGlow + ',0.10)');
+      sw.addColorStop(1, 'rgba(' + TH.aGlow + ',0)');
       rcx.beginPath();
       rcx.moveTo(0, 0);
       rcx.arc(0, 0, R, -0.5, 0);
@@ -1037,8 +1070,8 @@
 
     rcx.beginPath();
     rcx.arc(c, c, RW * (showAll ? 0.042 : 0.035), 0, 6.2832);
-    rcx.fillStyle = showAll ? '#FFD9A8' : '#FFB25E';
-    rcx.shadowColor = 'rgba(255,178,94,' + (showAll ? 1 : 0.8) + ')';
+    rcx.fillStyle = showAll ? TH.ah : TH.a;
+    rcx.shadowColor = 'rgba(' + TH.aGlow + ',' + (showAll ? 1 : 0.8) + ')';
     rcx.shadowBlur = (showAll ? 34 : 18) * devicePixelRatio;
     rcx.fill();
     rcx.shadowBlur = 0;
@@ -1056,19 +1089,19 @@
       if (isA) {
         rcx.beginPath();
         rcx.arc(c, c, ringR, 0, 6.2832);
-        rcx.strokeStyle = 'rgba(143,134,255,0.5)';
+        rcx.strokeStyle = 'rgba(' + TH.vGlow + ',0.5)';
         rcx.stroke();
       }
       rcx.beginPath();
       rcx.arc(x, y, (isA ? 7 : showAll ? 5.5 : 4.5) * devicePixelRatio, 0, 6.2832);
-      rcx.fillStyle = isA ? '#FFB25E' : showAll ? '#B0A9FF' : '#8F86FF';
-      if (isA) { rcx.shadowColor = 'rgba(255,178,94,0.9)'; rcx.shadowBlur = 14 * devicePixelRatio; }
-      else if (showAll) { rcx.shadowColor = 'rgba(143,134,255,0.7)'; rcx.shadowBlur = 8 * devicePixelRatio; }
+      rcx.fillStyle = isA ? TH.a : TH.v;
+      if (isA) { rcx.shadowColor = 'rgba(' + TH.aGlow + ',0.9)'; rcx.shadowBlur = 14 * devicePixelRatio; }
+      else if (showAll) { rcx.shadowColor = 'rgba(' + TH.vGlow + ',0.7)'; rcx.shadowBlur = 8 * devicePixelRatio; }
       rcx.fill();
       rcx.shadowBlur = 0;
       if (isA || showAll) {
         rcx.font = ((isA ? 11 : 10) * devicePixelRatio) + 'px ui-monospace, Consolas, monospace';
-        rcx.fillStyle = isA ? '#FFD9A8' : 'rgba(255,217,168,0.8)';
+        rcx.fillStyle = isA ? TH.ah : 'rgba(' + TH.ahGlow + ',0.8)';
         var tx = x + 12 * devicePixelRatio;
         if (tx + rcx.measureText(SKILLS[i].n).width > RW) tx = x - 12 * devicePixelRatio - rcx.measureText(SKILLS[i].n).width;
         rcx.fillText(SKILLS[i].n, tx, y + 4 * devicePixelRatio);
@@ -1166,6 +1199,7 @@
         '  github       jump to the full flight record',
         '  youtube      the gaming side-channel',
         '  logbook      achievements and side quests',
+        '  theme        phosphor calibration: amber | green | violet',
         '  clear        wipe the screen',
         '  history      your command history',
         '  exit         try it and see'
@@ -1247,6 +1281,20 @@
         'SIDE QUEST    gaming content creator — youtube @AmeysGamezone'
       ]);
       tprint('type "youtube" to visit the side-channel.', 't-vio');
+    },
+    theme: function (arg) {
+      var t = (arg || '').toLowerCase().trim();
+      if (t !== 'amber' && t !== 'green' && t !== 'violet') {
+        tprint('usage: theme amber | green | violet', 't-dim');
+        tprint('current phosphor: ' + (document.documentElement.getAttribute('data-theme') || 'amber').toUpperCase(), 't-vio');
+        return;
+      }
+      if (t === 'amber') document.documentElement.removeAttribute('data-theme');
+      else document.documentElement.setAttribute('data-theme', t);
+      try { localStorage.setItem('ops-theme', t); } catch (e) { /* not persisted */ }
+      syncCanvasTheme();
+      tprint('phosphor recalibrated: ' + t.toUpperCase() + ' spectrum online.', 't-ok');
+      if (t === 'green') tprint('(welcome to 1978. the ship approves.)', 't-dim');
     },
     clear: function () { termOut.innerHTML = ''; },
     history: function () {
