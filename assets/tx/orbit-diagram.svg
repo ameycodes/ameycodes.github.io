@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" font-family="Consolas, monospace">
+  <rect width="640" height="400" fill="#0A0D14"/>
+  <g fill="none" stroke="#33405C">
+    <circle cx="320" cy="200" r="70" stroke-opacity=".5"/>
+    <circle cx="320" cy="200" r="120" stroke-opacity=".5"/>
+    <circle cx="320" cy="200" r="170" stroke-opacity=".9"/>
+  </g>
+  <circle cx="320" cy="200" r="12" fill="#FFB25E"/>
+  <circle cx="320" cy="200" r="20" fill="#FFB25E" opacity=".25"/>
+  <g fill="#8F86FF">
+    <circle cx="380" cy="163" r="5"/>
+    <circle cx="262" cy="240" r="5"/>
+    <circle cx="410" cy="280" r="5"/>
+    <circle cx="205" cy="150" r="5"/>
+    <circle cx="320" cy="80" r="5"/>
+    <circle cx="465" cy="155" r="5"/>
+    <circle cx="175" cy="280" r="5"/>
+    <circle cx="490" cy="235" r="5"/>
+  </g>
+  <g fill="#7C87A0" font-size="11" letter-spacing="2">
+    <text x="330" y="124">CORE</text>
+    <text x="330" y="74">BACKEND</text>
+    <text x="330" y="24">DEVOPS</text>
+  </g>
+  <text x="20" y="380" fill="#4A5568" font-size="10" letter-spacing="3">AMEY ORBITAL SYSTEMS — SKILL ARRAY, SCHEMATIC VIEW</text>
+</svg>

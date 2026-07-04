@@ -706,6 +706,7 @@
     <a href="#systems">SYSTEMS</a>
     <a href="#terminal">TERMINAL</a>
     <a href="#logbook">LOGBOOK</a>
+    <a href="/blog/">TRANSMISSIONS</a>
     <a href="#comms">COMMS</a>
   </nav>
   <span id="clock">T+00:00:00</span>
@@ -833,6 +834,11 @@
         <span class="stamp">SIDE QUEST · ONGOING</span>
         <h3>Gaming content creator — AmeysGamezone</h3>
         <p>Part-time gaming content creator on YouTube. When not deploying pipelines: deploying killshots. Tune in at <a href="https://www.youtube.com/@ameysgamezone7801" target="_blank" rel="noopener">@AmeysGamezone</a>.</p>
+      </div>
+      <div class="log-entry reveal">
+        <span class="stamp">TRANSMISSIONS · OCCASIONAL</span>
+        <h3>Field notes on Medium</h3>
+        <p>Sometimes the flight log becomes prose — engineering notes and write-ups transmitted from orbit. Read them at <a href="https://medium.com/@ameycodes" target="_blank" rel="noopener">medium.com/@ameycodes</a>.</p>
       </div>
     </div>
   </section>
@@ -1295,6 +1301,7 @@
         '  logbook      achievements and side quests',
         '  theme        phosphor calibration: amber | green | violet',
         '  dock         docking simulator — bring her in gently',
+        '  blog         transmissions archive — engineering notes at /blog',
         '  clear        wipe the screen',
         '  history      your command history',
         '  exit         try it and see'
@@ -1359,11 +1366,23 @@
       tprint('  ▶ <a href="https://www.youtube.com/@ameysgamezone7801" target="_blank" rel="noopener">youtube.com/@ameysgamezone7801</a> — deploying killshots since always.', 't-amber', true);
       window.open('https://www.youtube.com/@ameysgamezone7801', '_blank', 'noopener');
     },
+    blog: function () {
+      tprint('opening the downlink archive ...', 't-ok');
+      tprint('  ✎ <a href="/blog/">/blog/ — TRANSMISSIONS</a> · engineering notes from orbit.', 't-amber', true);
+      window.open('/blog/', '_blank', 'noopener');
+    },
+    transmissions: function () { COMMANDS.blog(); },
+    medium: function () {
+      tprint('routing to the mirror relay ...', 't-ok');
+      tprint('  ✎ <a href="https://medium.com/@ameycodes" target="_blank" rel="noopener">medium.com/@ameycodes</a> — cross-posted prose.', 't-amber', true);
+      window.open('https://medium.com/@ameycodes', '_blank', 'noopener');
+    },
     contact: function () {
       tprint('OPENING CHANNEL 07 ...', 't-dim');
       tprint('  email   : <a href="mailto:ameygondhalekar34@gmail.com">ameygondhalekar34@gmail.com</a>', 't-amber', true);
       tprint('  github  : <a href="https://github.com/ameycodes" target="_blank" rel="noopener">github.com/ameycodes</a>', 't-amber', true);
       tprint('  youtube : <a href="https://www.youtube.com/@ameysgamezone7801" target="_blank" rel="noopener">@AmeysGamezone</a>', 't-amber', true);
+      tprint('  medium  : <a href="https://medium.com/@ameycodes" target="_blank" rel="noopener">medium.com/@ameycodes</a>', 't-amber', true);
       tprint('response time: one orbit or less.', 't-dim');
     },
     github: function () {
@@ -1373,9 +1392,10 @@
     logbook: function () {
       tprintMany([
         'ACHIEVEMENT   rank #7 — Cybersecurity × ML Hackathon, IIT Kanpur',
-        'SIDE QUEST    gaming content creator — youtube @AmeysGamezone'
+        'SIDE QUEST    gaming content creator — youtube @AmeysGamezone',
+        'TRANSMISSION  occasional blogs — medium.com/@ameycodes'
       ]);
-      tprint('type "youtube" to visit the side-channel.', 't-vio');
+      tprint('type "youtube" or "blog" to visit the side-channels.', 't-vio');
     },
     dock: function () {
       if (DOCK.active) return;

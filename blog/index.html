@@ -1,0 +1,55 @@
+---
+title: TRANSMISSIONS
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Transmissions — engineering notes and write-ups from Amey's orbital station: backend, DevOps, AI agents, and the occasional docking mishap.">
+<meta name="theme-color" content="#0A0D14">
+<meta name="color-scheme" content="dark">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ameycodes.github.io/blog/">
+<meta property="og:title" content="TRANSMISSIONS // AMEY x ORBITAL OPS">
+<meta property="og:description" content="Engineering notes transmitted from orbit — backend, DevOps, and AI agents.">
+<title>TRANSMISSIONS // AMEY x ORBITAL OPS</title>
+<link rel="canonical" href="https://ameycodes.github.io/blog/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
+<link rel="stylesheet" href="/assets/blog.css">
+</head>
+<body>
+<header class="tx-topbar">
+  <span class="led" aria-hidden="true"></span>
+  <span class="brand">AMEY&nbsp;ORBITAL&nbsp;SYSTEMS</span>
+  <span class="spacer"></span>
+  <nav><a href="/">◂ RETURN TO STATION</a></nav>
+</header>
+<main class="tx-wrap">
+  <p class="tx-eyebrow">Downlink archive // {{ site.posts.size }} received</p>
+  <h1 class="tx-title">Transmissions</h1>
+  <div class="tx-meta">
+    <span>CHANNEL <b>ENGINEERING</b></span>
+    <span>ENCRYPTION <b>NONE — READ FREELY</b></span>
+    <span>ALSO ON <b><a href="https://medium.com/@ameycodes" target="_blank" rel="noopener">MEDIUM</a></b></span>
+  </div>
+
+  {% if site.posts.size == 0 %}
+  <div class="tx-empty">NO TRANSMISSIONS RECEIVED YET. THE ANTENNA IS UP — CHECK BACK SOON.</div>
+  {% else %}
+  <div class="tx-list">
+    {% for post in site.posts %}
+    <a class="tx-card" href="{{ post.url }}">
+      <div class="tx-line">
+        <span class="id">TX-{{ site.posts.size | minus: forloop.index0 | prepend: '00' | slice: -3, 3 }}</span>
+        <span>{{ post.date | date: "%Y.%m.%d" }}</span>
+      </div>
+      <h2>{{ post.title }}</h2>
+      <p>{{ post.description | default: post.excerpt | strip_html | truncate: 150 }}</p>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</main>
+</body>
+</html>
