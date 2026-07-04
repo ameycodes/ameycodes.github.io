@@ -61,6 +61,14 @@ Drop files in `assets/tx/` and reference them with standard Markdown. GIFs anima
 
 For animation-heavy demos, a `<video autoplay loop muted playsinline>` tag keeps file sizes sane compared to giant GIFs.
 
+Third-party embeds work too, since this is just HTML underneath. For example — actual security-camera footage of the flight engineer realizing the "harmless config change" he deployed on Friday at 17:58 has reached production:
+
+<figure style="max-width:420px">
+  <div class="tenor-gif-embed" data-postid="5255913" data-share-method="host" data-aspect-ratio="0.932836" data-width="100%"><a href="https://tenor.com/view/pug-shocked-surprised-what-turn-gif-5255913">Pug Shocked GIF</a>from <a href="https://tenor.com/search/pug-gifs">Pug GIFs</a></div>
+  <figcaption>FIG 02 — CREW REACTION, COLORIZED. THE PAGER RANG 90 SECONDS LATER.</figcaption>
+</figure>
+<script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+
 ## Everything else
 
 Blockquotes, lists, and tables all wear the station livery:
