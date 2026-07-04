@@ -928,6 +928,53 @@
     mx = (e.clientX / window.innerWidth - 0.5);
     my = (e.clientY / window.innerHeight - 0.5);
   });
+  /* a comet crosses the sky ~20s in, then again at irregular intervals */
+  var comet = null;
+  var nextCometAt = performance.now() + 20000;
+  function spawnComet(now) {
+    var fromLeft = Math.random() < 0.5;
+    var angle = 0.3 + Math.random() * 0.3; /* shallow dive below horizontal */
+    var ux = (fromLeft ? 1 : -1) * Math.cos(angle);
+    var uy = Math.sin(angle);
+    comet = {
+      x: fromLeft ? -0.06 * W : 1.06 * W,
+      y: Math.random() * H * 0.45,
+      ux: ux, uy: uy,
+      spd: (0.30 + Math.random() * 0.22) * devicePixelRatio, /* px per ms */
+      last: now
+    };
+  }
+  function drawComet(now) {
+    var dt = Math.min(now - comet.last, 50);
+    comet.last = now;
+    comet.x += comet.ux * comet.spd * dt;
+    comet.y += comet.uy * comet.spd * dt;
+    var tailLen = 150 * devicePixelRatio;
+    var tailX = comet.x - comet.ux * tailLen;
+    var tailY = comet.y - comet.uy * tailLen;
+    var grad = cx.createLinearGradient(comet.x, comet.y, tailX, tailY);
+    grad.addColorStop(0, 'rgba(255,224,186,0.9)');
+    grad.addColorStop(1, 'rgba(255,224,186,0)');
+    cx.strokeStyle = grad;
+    cx.lineWidth = 2 * devicePixelRatio;
+    cx.lineCap = 'round';
+    cx.beginPath();
+    cx.moveTo(comet.x, comet.y);
+    cx.lineTo(tailX, tailY);
+    cx.stroke();
+    cx.beginPath();
+    cx.arc(comet.x, comet.y, 2.4 * devicePixelRatio, 0, 6.2832);
+    cx.fillStyle = '#FFF4E4';
+    cx.shadowColor = 'rgba(255,220,170,0.9)';
+    cx.shadowBlur = 12 * devicePixelRatio;
+    cx.fill();
+    cx.shadowBlur = 0;
+    if (comet.x < -tailLen || comet.x > W + tailLen || comet.y > H + tailLen) {
+      comet = null;
+      nextCometAt = now + 25000 + Math.random() * 35000;
+    }
+  }
+
   var frame = 0;
   function drawStars() {
     cx.clearRect(0, 0, W, H);
@@ -947,7 +994,12 @@
         : 'rgba(190,195,235,' + a + ')';
       cx.fill();
     }
-    if (!reduceMotion) requestAnimationFrame(drawStars);
+    if (!reduceMotion) {
+      var now = performance.now();
+      if (!comet && now >= nextCometAt) spawnComet(now);
+      if (comet) drawComet(now);
+      requestAnimationFrame(drawStars);
+    }
   }
   drawStars();
 
