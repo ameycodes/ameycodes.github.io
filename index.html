@@ -566,6 +566,47 @@
   }
   #matrix.on { opacity: 1; }
 
+  /* ---------- docking simulator ---------- */
+  #dock-wrap { position: relative; }
+  #dock-cv {
+    display: block;
+    background: #070A11;
+    border: 1px solid var(--line);
+  }
+  #dock-abort {
+    position: absolute;
+    top: 10px; right: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .14em;
+    background: rgba(16,21,34,0.8);
+    border: 1px solid var(--line-bright);
+    color: var(--dim);
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  #dock-abort:hover { border-color: var(--err); color: var(--err); }
+  .dock-pad {
+    position: absolute;
+    bottom: 12px; right: 12px;
+    display: none;
+    grid-template-areas: '. u .' 'l d r';
+    gap: 6px;
+    touch-action: none;
+  }
+  @media (pointer: coarse) { .dock-pad { display: grid; } }
+  .dock-btn {
+    width: 46px; height: 46px;
+    font-size: 16px;
+    background: rgba(16,21,34,0.8);
+    border: 1px solid var(--line-bright);
+    color: var(--amber);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .dock-btn:active { background: var(--amber); color: #16100A; }
+
   /* ---------- logbook ---------- */
   #logbook .log {
     border-left: 1px solid var(--line);
@@ -885,7 +926,8 @@
     'CHAI RESERVES: <b>78%</b> — REFILL SCHEDULED',
     'NEXT DEPLOY: <b>SOON™</b>',
     'STATION TIME: <b class="tk-utc">--:--</b> UTC',
-    'VISITOR ORIGIN: <b class="tk-tz">EARTH</b>'
+    'VISITOR ORIGIN: <b class="tk-tz">EARTH</b>',
+    'DOCKING SIM RECORD: <b class="tk-dock">UNCLAIMED — TYPE "dock"</b>'
   ];
   var half = items.map(function (i) { return '<span>' + i + '</span>'; }).join('');
   document.getElementById('ticker-track').innerHTML = half + half;
@@ -1252,6 +1294,7 @@
         '  youtube      the gaming side-channel',
         '  logbook      achievements and side quests',
         '  theme        phosphor calibration: amber | green | violet',
+        '  dock         docking simulator — bring her in gently',
         '  clear        wipe the screen',
         '  history      your command history',
         '  exit         try it and see'
@@ -1334,6 +1377,11 @@
       ]);
       tprint('type "youtube" to visit the side-channel.', 't-vio');
     },
+    dock: function () {
+      if (DOCK.active) return;
+      startDock();
+    },
+    play: function () { COMMANDS.dock(); },
     theme: function (arg) {
       var t = (arg || '').toLowerCase().trim();
       if (t !== 'amber' && t !== 'green' && t !== 'violet') {
@@ -1593,6 +1641,272 @@
       }
     }, reduceMotion ? 1000 : 40);
     if (reduceMotion) { clearInterval(iv); mtxCv.classList.remove('on'); mtxOn = false; tprint('(matrix rain skipped — reduced motion is on. the machines respect that.)', 't-dim'); }
+  }
+
+  /* ================= DOCKING SIMULATOR ================= */
+  var DOCK = { active: false };
+  var MONO_STACK = 'ui-monospace, Consolas, monospace';
+
+  function updateDockTicker() {
+    var rec = 0;
+    try { rec = parseInt(localStorage.getItem('ops-dock-record') || '0', 10) || 0; } catch (e) { /* no storage */ }
+    document.querySelectorAll('.tk-dock').forEach(function (el) {
+      el.textContent = rec > 0 ? rec + ' PTS' : 'UNCLAIMED — TYPE "dock"';
+    });
+  }
+  updateDockTicker();
+
+  function endDock(lines) {
+    if (!DOCK.active) return;
+    DOCK.active = false;
+    document.removeEventListener('keydown', DOCK.onKeyDown, true);
+    document.removeEventListener('keyup', DOCK.onKeyUp, true);
+    if (DOCK.raf) cancelAnimationFrame(DOCK.raf);
+    if (DOCK.wrap && DOCK.wrap.parentNode) DOCK.wrap.parentNode.removeChild(DOCK.wrap);
+    termOut.style.display = '';
+    document.getElementById('term-in-row').style.display = '';
+    document.getElementById('term-hint').style.display = '';
+    lines.forEach(function (l) { tprint(l[0], l[1]); });
+    scrollTerm();
+    termInput.focus();
+  }
+
+  function startDock() {
+    DOCK.active = true;
+    termOut.style.display = 'none';
+    document.getElementById('term-in-row').style.display = 'none';
+    document.getElementById('term-hint').style.display = 'none';
+    termInput.blur();
+
+    var wrap = document.createElement('div');
+    wrap.id = 'dock-wrap';
+    wrap.innerHTML =
+      '<canvas id="dock-cv"></canvas>' +
+      '<button id="dock-abort" type="button">✕ ABORT [ESC]</button>' +
+      '<div class="dock-pad">' +
+        '<button type="button" class="dock-btn" data-k="up" style="grid-area:u" aria-label="Thrust up">▲</button>' +
+        '<button type="button" class="dock-btn" data-k="left" style="grid-area:l" aria-label="Thrust left">◀</button>' +
+        '<button type="button" class="dock-btn" data-k="down" style="grid-area:d" aria-label="Thrust down">▼</button>' +
+        '<button type="button" class="dock-btn" data-k="right" style="grid-area:r" aria-label="Thrust right">▶</button>' +
+      '</div>';
+    termBody.appendChild(wrap);
+    DOCK.wrap = wrap;
+    termBody.scrollTop = termBody.scrollHeight;
+
+    var gcv = document.getElementById('dock-cv');
+    var g = gcv.getContext('2d');
+    var dpr = devicePixelRatio;
+    var gw = Math.max(termBody.clientWidth - 36, 260);
+    var gh = 360;
+    gcv.width = gw * dpr; gcv.height = gh * dpr;
+    gcv.style.width = gw + 'px'; gcv.style.height = gh + 'px';
+    g.scale(dpr, dpr);
+
+    var bgStars = [];
+    for (var i = 0; i < 40; i++) bgStars.push([Math.random() * gw, Math.random() * gh, Math.random()]);
+
+    var keys = { up: false, down: false, left: false, right: false };
+    var round = 0, total = 0, best = 0;
+    try { best = parseInt(localStorage.getItem('ops-dock-record') || '0', 10) || 0; } catch (e) { /* no storage */ }
+    var ship, fuel, fuelMax, port, state, msg, msgUntil, last;
+    var V_LIMIT = 0.065; /* px per ms — dock softer than this */
+
+    function newRound() {
+      round++;
+      var drift = 0.02 + round * 0.008;
+      ship = {
+        x: 60,
+        y: gh / 2 + (Math.random() - 0.5) * 120,
+        vx: drift * (0.6 + Math.random() * 0.6),
+        vy: (Math.random() - 0.5) * drift
+      };
+      fuelMax = Math.max(100 - (round - 1) * 8, 55);
+      fuel = fuelMax;
+      port = {
+        x: gw - 34,
+        baseY: 70 + Math.random() * (gh - 140),
+        half: Math.max(26 - round * 2, 12),
+        t: Math.random() * 6.28
+      };
+      port.y = port.baseY;
+      state = 'brief';
+      msg = 'ROUND ' + round + ' — DRIFT DETECTED. BRING HER IN.';
+      msgUntil = performance.now() + 1400;
+    }
+
+    var KEYMAP = {
+      ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+      w: 'up', s: 'down', a: 'left', d: 'right',
+      W: 'up', S: 'down', A: 'left', D: 'right'
+    };
+    DOCK.onKeyDown = function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); finish('abort'); return; }
+      if (KEYMAP[e.key]) { e.preventDefault(); keys[KEYMAP[e.key]] = true; }
+    };
+    DOCK.onKeyUp = function (e) {
+      if (KEYMAP[e.key]) keys[KEYMAP[e.key]] = false;
+    };
+    document.addEventListener('keydown', DOCK.onKeyDown, true);
+    document.addEventListener('keyup', DOCK.onKeyUp, true);
+
+    wrap.querySelectorAll('.dock-btn').forEach(function (b) {
+      var k = b.getAttribute('data-k');
+      function on(e) { e.preventDefault(); keys[k] = true; }
+      function off(e) { e.preventDefault(); keys[k] = false; }
+      b.addEventListener('pointerdown', on);
+      b.addEventListener('pointerup', off);
+      b.addEventListener('pointercancel', off);
+      b.addEventListener('pointerleave', off);
+      b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    });
+    document.getElementById('dock-abort').addEventListener('click', function () { finish('abort'); });
+
+    function finish(kind) {
+      var isRecord = total > best && total > 0;
+      if (isRecord) {
+        best = total;
+        try { localStorage.setItem('ops-dock-record', String(best)); } catch (e) { /* no storage */ }
+        updateDockTicker();
+      }
+      var lines = [];
+      if (kind === 'abort') lines.push(['SIMULATION ABORTED. THE STATION UNDERSTANDS.', 't-dim']);
+      else if (kind === 'crash') lines.push(['IMPACT. CREW SURVIVED. PAPERWORK PENDING.', 't-err']);
+      else if (kind === 'adrift') lines.push(['ADRIFT — OUT OF RANGE. RESCUE TUG DISPATCHED (INVOICE ATTACHED).', 't-err']);
+      lines.push(['rounds docked: ' + (round - 1) + ' · final score: ' + total + ' pts', 't-amber']);
+      lines.push(['station record: ' + best + ' pts' + (isRecord ? '  ★ NEW RECORD' : ''), 't-vio']);
+      lines.push(['type "dock" to fly again.', 't-dim']);
+      endDock(lines);
+    }
+
+    function flame(dx, dy) {
+      g.beginPath();
+      g.moveTo(dx * 9, dy * 9);
+      g.lineTo(dx * 17 + dy * 4, dy * 17 + dx * 4);
+      g.lineTo(dx * 17 - dy * 4, dy * 17 - dx * 4);
+      g.closePath();
+      g.fill();
+    }
+
+    function draw(now) {
+      g.clearRect(0, 0, gw, gh);
+      for (var i = 0; i < bgStars.length; i++) {
+        var st = bgStars[i];
+        g.globalAlpha = 0.2 + st[2] * 0.5;
+        g.fillStyle = '#BEC3EB';
+        g.fillRect(st[0], st[1], 1.5, 1.5);
+      }
+      g.globalAlpha = 1;
+
+      /* station hull + docking port */
+      g.fillStyle = 'rgba(20,27,44,0.95)';
+      g.fillRect(port.x + 8, 0, gw - port.x - 8, gh);
+      g.fillStyle = '#33405C';
+      g.fillRect(port.x, 0, 8, port.y - port.half);
+      g.fillRect(port.x, port.y + port.half, 8, gh - port.y - port.half);
+      var blink = (Math.floor(now / 400) % 2) === 0;
+      g.fillStyle = blink ? TH.a : 'rgba(' + TH.aGlow + ',0.35)';
+      g.fillRect(port.x, port.y - port.half - 4, 8, 4);
+      g.fillRect(port.x, port.y + port.half, 8, 4);
+      g.fillStyle = 'rgba(' + TH.aGlow + ',0.08)';
+      g.fillRect(port.x - 30, port.y - port.half, 38, port.half * 2);
+
+      /* ship */
+      var speed = Math.sqrt(ship.vx * ship.vx + ship.vy * ship.vy);
+      g.save();
+      g.translate(ship.x, ship.y);
+      g.fillStyle = TH.a;
+      if (fuel > 0) {
+        if (keys.up) flame(0, 1);
+        if (keys.down) flame(0, -1);
+        if (keys.left) flame(1, 0);
+        if (keys.right) flame(-1, 0);
+      }
+      g.fillStyle = '#D7DEEC';
+      g.beginPath();
+      g.arc(0, 0, 7, 0, 6.2832);
+      g.fill();
+      g.fillStyle = TH.v;
+      g.fillRect(1, -2.5, 4, 5); /* forward viewport faces the station */
+      g.restore();
+
+      /* HUD */
+      g.font = '11px ' + MONO_STACK;
+      g.fillStyle = '#7C87A0';
+      g.fillText('ROUND ' + round, 14, 20);
+      g.fillText('SCORE ' + total + (best > 0 ? '  ·  RECORD ' + best : ''), 14, 36);
+      g.fillText('FUEL', 14, gh - 28);
+      g.fillStyle = '#232B3D';
+      g.fillRect(50, gh - 36, 120, 8);
+      g.fillStyle = fuel / fuelMax > 0.25 ? TH.a : '#FF7B72';
+      g.fillRect(50, gh - 36, 120 * fuel / fuelMax, 8);
+      var vOk = speed <= V_LIMIT;
+      g.fillStyle = vOk ? '#5DD9A1' : '#FF7B72';
+      g.fillText('REL VEL ' + Math.round(speed * 1000) + ' mm/s  ' + (vOk ? '● SAFE TO DOCK' : '▲ TOO HOT'), 14, gh - 12);
+
+      if (state === 'brief' || state === 'sealed') {
+        g.font = '13px ' + MONO_STACK;
+        g.fillStyle = TH.ah;
+        g.textAlign = 'center';
+        g.fillText(msg, gw / 2, 64);
+        if (state === 'brief' && round === 1) {
+          g.fillStyle = '#7C87A0';
+          g.font = '11px ' + MONO_STACK;
+          g.fillText('ARROWS / WASD: thrust · dock the port at a safe speed', gw / 2, 84);
+        }
+        g.textAlign = 'left';
+      }
+    }
+
+    function step(now) {
+      if (!DOCK.active) return;
+      var dt = Math.min(now - last, 40);
+      last = now;
+
+      if (state === 'brief' || state === 'sealed') {
+        if (now >= msgUntil) {
+          if (state === 'sealed') newRound();
+          else state = 'play';
+        }
+      } else {
+        var A = 0.00028;
+        var burning = false;
+        if (fuel > 0) {
+          if (keys.up) { ship.vy -= A * dt; burning = true; }
+          if (keys.down) { ship.vy += A * dt; burning = true; }
+          if (keys.left) { ship.vx -= A * dt; burning = true; }
+          if (keys.right) { ship.vx += A * dt; burning = true; }
+        }
+        if (burning) fuel = Math.max(0, fuel - 0.022 * dt);
+        ship.x += ship.vx * dt;
+        ship.y += ship.vy * dt;
+        if (round >= 4) port.y = port.baseY + Math.sin(now / 800 + port.t) * 16;
+
+        var speed = Math.sqrt(ship.vx * ship.vx + ship.vy * ship.vy);
+        if (ship.x + 7 >= port.x) {
+          if (Math.abs(ship.y - port.y) <= port.half && speed <= V_LIMIT && ship.vx > 0) {
+            var pts = 100 * round + Math.round(fuel);
+            total += pts;
+            state = 'sealed';
+            msg = 'HARD SEAL CONFIRMED — +' + pts + ' PTS';
+            msgUntil = now + 1400;
+          } else {
+            finish('crash');
+            return;
+          }
+        }
+        if (ship.x < -24 || ship.y < -24 || ship.y > gh + 24) {
+          finish('adrift');
+          return;
+        }
+      }
+
+      draw(now);
+      DOCK.raf = requestAnimationFrame(step);
+    }
+
+    newRound();
+    last = performance.now();
+    DOCK.raf = requestAnimationFrame(step);
   }
 
   /* ---------- comms handshake ---------- */
