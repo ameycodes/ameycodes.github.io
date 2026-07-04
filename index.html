@@ -157,12 +157,38 @@
   }
   @keyframes pulse { 50% { opacity: .35; } }
   #topbar .spacer { flex: 1; }
-  #topbar nav { display: flex; gap: 18px; }
+  #topbar nav.dnav { display: flex; gap: 18px; }
   #topbar nav a { color: var(--dim); letter-spacing: .14em; }
   #topbar nav a:hover { color: var(--amber); }
   #clock { color: var(--amber); font-variant-numeric: tabular-nums; }
+  #nav-toggle {
+    display: none;
+    background: transparent;
+    border: 1px solid var(--line-bright);
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1;
+    padding: 5px 9px;
+    cursor: pointer;
+  }
+  #mobile-nav {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    display: none;
+    flex-direction: column;
+    background: color-mix(in srgb, var(--void) 94%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line-bright);
+  }
+  #mobile-nav.open { display: flex; }
+  #mobile-nav a { padding: 14px 22px; border-top: 1px solid var(--line); letter-spacing: .2em; }
   @media (max-width: 860px) {
-    #topbar nav, #topbar .coords { display: none; }
+    #topbar nav.dnav, #topbar .coords { display: none; }
+    #nav-toggle { display: block; }
+    #topbar { gap: 10px; }
+    #topbar .brand { font-size: 10px; letter-spacing: .12em; }
   }
 
   .frame-tick {
@@ -701,7 +727,7 @@
   <span class="brand">AMEY&nbsp;ORBITAL&nbsp;SYSTEMS</span>
   <span class="coords">LAT 18.52 N · LON 73.85 E · ALT 412 KM</span>
   <span class="spacer"></span>
-  <nav aria-label="Sections">
+  <nav class="dnav" aria-label="Sections">
     <a href="#missions">MISSIONS</a>
     <a href="#systems">SYSTEMS</a>
     <a href="#terminal">TERMINAL</a>
@@ -710,6 +736,15 @@
     <a href="#comms">COMMS</a>
   </nav>
   <span id="clock">T+00:00:00</span>
+  <button id="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mobile-nav">☰</button>
+  <nav id="mobile-nav" aria-label="Sections">
+    <a href="#missions">MISSIONS</a>
+    <a href="#systems">SYSTEMS</a>
+    <a href="#terminal">TERMINAL</a>
+    <a href="#logbook">LOGBOOK</a>
+    <a href="/blog/">TRANSMISSIONS</a>
+    <a href="#comms">COMMS</a>
+  </nav>
 </header>
 
 <span class="frame-tick tl" aria-hidden="true"></span>
@@ -838,7 +873,7 @@
       <div class="log-entry reveal">
         <span class="stamp">TRANSMISSIONS · OCCASIONAL</span>
         <h3>Field notes on Medium</h3>
-        <p>Sometimes the flight log becomes prose — engineering notes and write-ups transmitted from orbit. Read them at <a href="https://medium.com/@ameycodes" target="_blank" rel="noopener">medium.com/@ameycodes</a>.</p>
+        <p>Sometimes the flight log becomes prose — engineering notes and write-ups transmitted from orbit. Read them live from the station at <a href="/blog/">TRANSMISSIONS</a>, or on the mirror relay at <a href="https://medium.com/@ameycodes" target="_blank" rel="noopener">medium.com/@ameycodes</a>.</p>
       </div>
     </div>
   </section>
@@ -913,6 +948,27 @@
     setTimeout(finishBoot, 3200); /* hard cap */
   }
 
+  /* ---------- mobile nav ---------- */
+  var navToggle = document.getElementById('nav-toggle');
+  var mobileNav = document.getElementById('mobile-nav');
+  navToggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = mobileNav.classList.toggle('open');
+    navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  mobileNav.addEventListener('click', function (e) {
+    if (e.target.tagName === 'A') {
+      mobileNav.classList.remove('open');
+      navToggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (mobileNav.classList.contains('open') && !mobileNav.contains(e.target)) {
+      mobileNav.classList.remove('open');
+      navToggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+
   /* ---------- mission clock ---------- */
   var clockEl = document.getElementById('clock');
   var t0 = performance.now();
@@ -932,8 +988,7 @@
     'CHAI RESERVES: <b>78%</b> — REFILL SCHEDULED',
     'NEXT DEPLOY: <b>SOON™</b>',
     'STATION TIME: <b class="tk-utc">--:--</b> UTC',
-    'VISITOR ORIGIN: <b class="tk-tz">EARTH</b>',
-    'DOCKING SIM RECORD: <b class="tk-dock">UNCLAIMED — TYPE "dock"</b>'
+    'VISITOR ORIGIN: <b class="tk-tz">EARTH</b>'
   ];
   var half = items.map(function (i) { return '<span>' + i + '</span>'; }).join('');
   document.getElementById('ticker-track').innerHTML = half + half;
@@ -1296,14 +1351,10 @@
         '  projects     list missions (add a name for details, e.g. "projects stock")',
         '  skills       subsystem proficiency report',
         '  contact      open a comms channel',
-        '  github       jump to the full flight record',
-        '  youtube      the gaming side-channel',
-        '  logbook      achievements and side quests',
         '  theme        phosphor calibration: amber | green | violet',
         '  dock         docking simulator — bring her in gently',
         '  blog         transmissions archive — engineering notes at /blog',
         '  clear        wipe the screen',
-        '  history      your command history',
         '  exit         try it and see'
       ]);
       tprint('');
@@ -1344,7 +1395,7 @@
         tprint('  [' + p[0] + ']' + '          '.slice(p[0].length) + p[1] + ' — ' + p[2]);
       });
       tprint('');
-      tprint('type "projects <name>" for the mission file, or "github" for the archive.', 't-vio');
+      tprint('type "projects <name>" for the mission file.', 't-vio');
     },
     skills: function () {
       tprint('SUBSYSTEM DIAGNOSTIC — 3 orbits:', 't-dim');
@@ -1360,11 +1411,6 @@
       });
       tprint('');
       tprint('all subsystems nominal.', 't-ok');
-    },
-    youtube: function () {
-      tprint('switching to the entertainment deck ...', 't-ok');
-      tprint('  ▶ <a href="https://www.youtube.com/@ameysgamezone7801" target="_blank" rel="noopener">youtube.com/@ameysgamezone7801</a> — deploying killshots since always.', 't-amber', true);
-      window.open('https://www.youtube.com/@ameysgamezone7801', '_blank', 'noopener');
     },
     blog: function () {
       tprint('opening the downlink archive ...', 't-ok');
@@ -1384,18 +1430,6 @@
       tprint('  youtube : <a href="https://www.youtube.com/@ameysgamezone7801" target="_blank" rel="noopener">@AmeysGamezone</a>', 't-amber', true);
       tprint('  medium  : <a href="https://medium.com/@ameycodes" target="_blank" rel="noopener">medium.com/@ameycodes</a>', 't-amber', true);
       tprint('response time: one orbit or less.', 't-dim');
-    },
-    github: function () {
-      tprint('routing to the full flight record ...', 't-ok');
-      window.open('https://github.com/ameycodes?tab=repositories', '_blank', 'noopener');
-    },
-    logbook: function () {
-      tprintMany([
-        'ACHIEVEMENT   rank #7 — Cybersecurity × ML Hackathon, IIT Kanpur',
-        'SIDE QUEST    gaming content creator — youtube @AmeysGamezone',
-        'TRANSMISSION  occasional blogs — medium.com/@ameycodes'
-      ]);
-      tprint('type "youtube" or "blog" to visit the side-channels.', 't-vio');
     },
     dock: function () {
       if (DOCK.active) return;
@@ -1417,10 +1451,6 @@
       if (t === 'green') tprint('(welcome to 1978. the ship approves.)', 't-dim');
     },
     clear: function () { termOut.innerHTML = ''; },
-    history: function () {
-      if (!history.length) { tprint('no history yet. you just got here.', 't-dim'); return; }
-      history.forEach(function (h, i) { tprint('  ' + (i + 1) + '  ' + h); });
-    },
     whoami: function () {
       tprint(sudoMode ? 'root. obviously.' : 'visitor. possibly a recruiter. definitely someone with excellent taste.');
       if (docking > 1) tprint('(docking #' + docking + ' on record. the ship notices these things.)', 't-dim');
