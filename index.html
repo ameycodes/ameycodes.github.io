@@ -1299,6 +1299,163 @@
     }
   }
 
+  /* a small survey craft hovers in ~45s, scans the void, then whooshes away */
+  var ship = null;
+  var nextShipAt = performance.now() + 45000;
+  function spawnShip(now) {
+    var fromLeft = Math.random() < 0.5;
+    ship = {
+      dir: fromLeft ? 1 : -1,
+      sx: fromLeft ? -60 * devicePixelRatio : W + 60 * devicePixelRatio,
+      hx: W * (0.25 + Math.random() * 0.5),
+      hy: H * (0.12 + Math.random() * 0.2),
+      phase: 'enter',
+      t0: now,
+      scanMs: 3800 + Math.random() * 1800
+    };
+  }
+  function drawShipBody(x, y, tilt, now, thrust) {
+    var s = devicePixelRatio;
+    cx.save();
+    cx.translate(x, y);
+    cx.rotate(tilt);
+    if (thrust > 0.02) {
+      cx.save();
+      cx.globalCompositeOperation = 'lighter';
+      var tg = cx.createLinearGradient(-ship.dir * 14 * s, 0, -ship.dir * (14 + 46 * thrust) * s, 0);
+      tg.addColorStop(0, 'rgba(143,134,255,' + (0.55 * thrust) + ')');
+      tg.addColorStop(1, 'rgba(143,134,255,0)');
+      cx.strokeStyle = tg;
+      cx.lineWidth = 5 * s;
+      cx.lineCap = 'round';
+      cx.beginPath();
+      cx.moveTo(-ship.dir * 14 * s, 0);
+      cx.lineTo(-ship.dir * (14 + 46 * thrust) * s, 0);
+      cx.stroke();
+      cx.restore();
+    }
+    /* dome */
+    cx.beginPath();
+    cx.arc(0, -3 * s, 7.5 * s, Math.PI, 0);
+    cx.closePath();
+    cx.fillStyle = 'rgba(143,134,255,0.30)';
+    cx.fill();
+    cx.strokeStyle = 'rgba(176,169,255,0.5)';
+    cx.lineWidth = s;
+    cx.stroke();
+    /* hull */
+    cx.beginPath();
+    cx.ellipse(0, 0, 22 * s, 7 * s, 0, 0, 6.2832);
+    var hgr = cx.createLinearGradient(0, -7 * s, 0, 7 * s);
+    hgr.addColorStop(0, '#333E58');
+    hgr.addColorStop(0.5, '#1D2436');
+    hgr.addColorStop(1, '#121724');
+    cx.fillStyle = hgr;
+    cx.fill();
+    cx.strokeStyle = 'rgba(51,64,92,0.9)';
+    cx.stroke();
+    /* beacon */
+    if (Math.floor(now / 260) % 2 === 0) {
+      cx.beginPath();
+      cx.arc(0, -11 * s, 1.6 * s, 0, 6.2832);
+      cx.fillStyle = '#FF7B72';
+      cx.shadowColor = 'rgba(255,123,114,0.9)';
+      cx.shadowBlur = 8 * s;
+      cx.fill();
+      cx.shadowBlur = 0;
+    }
+    /* running lights cycling colors */
+    var cols = ['#FFB25E', '#5DD9A1', '#8F86FF'];
+    for (var i = -1; i <= 1; i++) {
+      var ci = (Math.floor(now / 240) + i + 3) % 3;
+      cx.beginPath();
+      cx.arc(i * 12 * s, 4.4 * s, 1.5 * s, 0, 6.2832);
+      cx.fillStyle = cols[ci];
+      cx.shadowColor = cols[ci];
+      cx.shadowBlur = 6 * s;
+      cx.fill();
+      cx.shadowBlur = 0;
+    }
+    cx.restore();
+  }
+  function drawShip(now) {
+    var s = devicePixelRatio;
+    var x, y, tilt = 0, thrust = 0, p, e;
+    if (ship.phase === 'enter') {
+      p = Math.min((now - ship.t0) / 1500, 1);
+      e = 1 - Math.pow(1 - p, 3);
+      x = ship.sx + (ship.hx - ship.sx) * e;
+      y = ship.hy + Math.sin(now / 320) * 3 * s;
+      thrust = 1 - e;
+      if (p >= 1) { ship.phase = 'scan'; ship.t0 = now; }
+    } else if (ship.phase === 'scan') {
+      x = ship.hx;
+      y = ship.hy + Math.sin(now / 480) * 5 * s;
+      /* sweeping scan beam */
+      var ang = Math.sin(now / 650) * 0.32;
+      var L = 170 * s;
+      cx.save();
+      cx.globalCompositeOperation = 'lighter';
+      cx.translate(x, y + 7 * s);
+      cx.rotate(ang);
+      var bg = cx.createLinearGradient(0, 0, 0, L);
+      bg.addColorStop(0, 'rgba(93,217,161,0.30)');
+      bg.addColorStop(0.7, 'rgba(93,217,161,0.10)');
+      bg.addColorStop(1, 'rgba(93,217,161,0)');
+      cx.beginPath();
+      cx.moveTo(-4 * s, 0);
+      cx.lineTo(4 * s, 0);
+      cx.lineTo(30 * s, L);
+      cx.lineTo(-30 * s, L);
+      cx.closePath();
+      cx.fillStyle = bg;
+      cx.fill();
+      /* bright line travelling down the beam */
+      var sp2 = (now % 1100) / 1100;
+      var d = (0.15 + 0.75 * sp2) * L;
+      var wAt = 4 * s + 26 * s * (d / L);
+      cx.strokeStyle = 'rgba(190,255,225,' + (0.5 * (1 - sp2)) + ')';
+      cx.lineWidth = 1.5 * s;
+      cx.beginPath();
+      cx.moveTo(-wAt, d);
+      cx.lineTo(wAt, d);
+      cx.stroke();
+      cx.restore();
+      if (now - ship.t0 >= ship.scanMs) { ship.phase = 'go'; ship.t0 = now; }
+    } else {
+      /* whoosh into infinity */
+      p = Math.min((now - ship.t0) / 750, 1);
+      e = p * p * p;
+      x = ship.hx + ship.dir * e * W * 1.3;
+      y = ship.hy - e * H * 0.25;
+      tilt = -ship.dir * 0.12;
+      thrust = Math.min(1, p * 2);
+      if (p > 0.1) {
+        cx.save();
+        cx.globalCompositeOperation = 'lighter';
+        for (var k2 = 0; k2 < 3; k2++) {
+          var ln = (30 + 40 * e) * s * (1 + k2 * 0.5);
+          var sg = cx.createLinearGradient(x, y, x - ship.dir * ln, y + ln * 0.19);
+          sg.addColorStop(0, 'rgba(215,222,236,' + (0.35 * (1 - k2 * 0.25)) + ')');
+          sg.addColorStop(1, 'rgba(215,222,236,0)');
+          cx.strokeStyle = sg;
+          cx.lineWidth = (2 - k2 * 0.5) * s;
+          cx.beginPath();
+          cx.moveTo(x - ship.dir * 6 * s, y + (k2 - 1) * 4 * s);
+          cx.lineTo(x - ship.dir * (6 * s + ln), y + (k2 - 1) * 4 * s + ln * 0.19);
+          cx.stroke();
+        }
+        cx.restore();
+      }
+      if (p >= 1) {
+        ship = null;
+        nextShipAt = now + 60000 + Math.random() * 60000;
+        return;
+      }
+    }
+    drawShipBody(x, y, tilt, now, thrust);
+  }
+
   var frame = 0;
   function drawStars() {
     cx.clearRect(0, 0, W, H);
@@ -1324,6 +1481,8 @@
       if (comet) drawComet(now);
       if (!asteroid && now >= nextAsteroidAt) spawnAsteroid(now);
       if (asteroid) drawAsteroid(now);
+      if (!ship && now >= nextShipAt) spawnShip(now);
+      if (ship) drawShip(now);
       requestAnimationFrame(drawStars);
     }
   }
