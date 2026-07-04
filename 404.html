@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0A0D14">
+<meta name="color-scheme" content="dark">
+<title>SIGNAL LOST // 404</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
+<style>
+  :root {
+    --void: #0A0D14;
+    --line: #232B3D;
+    --text: #D7DEEC;
+    --dim: #7C87A0;
+    --amber: #FFB25E;
+    --err: #FF7B72;
+    --mono: ui-monospace, 'Cascadia Code', Consolas, 'SF Mono', Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--void);
+    color: var(--text);
+    font-family: var(--mono);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  #static {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: .16;
+    pointer-events: none;
+    image-rendering: pixelated;
+    width: 100vw;
+    height: 100vh;
+  }
+  main {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 32px;
+    max-width: 560px;
+  }
+  .glitch {
+    font-size: clamp(28px, 6vw, 52px);
+    letter-spacing: .18em;
+    color: var(--err);
+    margin: 0 0 10px;
+    font-weight: 600;
+    animation: flicker 3.2s steps(1) infinite;
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    92% { opacity: 1; }
+    93% { opacity: .35; }
+    94% { opacity: 1; }
+    97% { opacity: .6; }
+    98% { opacity: 1; }
+  }
+  .code {
+    font-size: 12px;
+    letter-spacing: .3em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin: 0 0 28px;
+  }
+  p.msg {
+    color: var(--dim);
+    font-size: 14px;
+    line-height: 1.7;
+    margin: 0 0 36px;
+  }
+  .carrier {
+    font-size: 11px;
+    letter-spacing: .2em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 36px;
+  }
+  .carrier::after {
+    content: '';
+    animation: dots 1.6s steps(4) infinite;
+  }
+  @keyframes dots {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+  }
+  a.btn {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 13px 26px;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+  }
+  a.btn:hover {
+    background: var(--amber);
+    color: #16100A;
+    box-shadow: 0 0 24px rgba(255, 178, 94, .35);
+  }
+  a.btn:focus-visible { outline: 1px solid var(--amber); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) {
+    .glitch, .carrier::after { animation: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="static" aria-hidden="true"></canvas>
+<main>
+  <h1 class="glitch">▚▞ SIGNAL LOST ▞▚</h1>
+  <p class="code">Error 404 — drifted out of orbit</p>
+  <p class="msg">
+    The coordinates you requested do not resolve to any known deck of this station.
+    Either the page was jettisoned, or the link took a wrong turn at the Kármán line.
+  </p>
+  <p class="carrier">attempting to re-acquire carrier</p>
+  <a class="btn" href="/">◂ Return to station</a>
+</main>
+<script>
+(function () {
+  'use strict';
+  var cv = document.getElementById('static');
+  var cx = cv.getContext('2d');
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* chunky CRT static: render tiny, let CSS scale it up */
+  var SW = 160, SH = 90;
+  cv.width = SW; cv.height = SH;
+  function noise() {
+    var img = cx.createImageData(SW, SH);
+    var d = img.data;
+    for (var i = 0; i < d.length; i += 4) {
+      var v = Math.random() * 255;
+      d[i] = v * 0.75; d[i + 1] = v * 0.8; d[i + 2] = v; d[i + 3] = 255;
+    }
+    cx.putImageData(img, 0, 0);
+  }
+  noise();
+  if (!reduceMotion) setInterval(noise, 90);
+})();
+</script>
+</body>
+</html>

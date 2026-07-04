@@ -1255,6 +1255,7 @@
     },
     whoami: function () {
       tprint(sudoMode ? 'root. obviously.' : 'visitor. possibly a recruiter. definitely someone with excellent taste.');
+      if (docking > 1) tprint('(docking #' + docking + ' on record. the ship notices these things.)', 't-dim');
     },
     date: function () {
       tprint(new Date().toString());
@@ -1429,12 +1430,26 @@
     if (e.target.tagName !== 'A') termInput.focus();
   });
 
-  /* greeting */
-  tprintMany([
-    'amey-os v5.0 — visitor shell',
-    'connection from: somewhere nice, probably',
-    ''
-  ], 't-dim');
+  /* greeting — the ship remembers returning visitors (stored only in their browser) */
+  var docking = 1;
+  try {
+    docking = (parseInt(localStorage.getItem('ops-dockings') || '0', 10) || 0) + 1;
+    localStorage.setItem('ops-dockings', String(docking));
+  } catch (e) { /* storage unavailable — treat as first docking */ }
+
+  tprint('amey-os v5.0 — visitor shell', 't-dim');
+  if (docking <= 1) {
+    tprint('connection from: somewhere nice, probably', 't-dim');
+  } else {
+    tprint('WELCOME BACK. DOCKING #' + docking + ' LOGGED.', 't-amber');
+    var quips = {
+      2: 'the chai is where you left it.',
+      3: 'third docking — practically crew at this point.',
+      4: 'docking #4. we should really get you a keycard.'
+    };
+    tprint(quips[docking] || 'the airlock recognizes you on sight now.', 't-dim');
+  }
+  tprint('');
   tprint('type "help" to begin. type other things to find out what happens.', 't-ok');
   tprint('');
 
