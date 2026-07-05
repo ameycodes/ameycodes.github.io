@@ -2055,6 +2055,8 @@
     var mcx = mtxCv.getContext('2d');
     mtxCv.width = window.innerWidth * devicePixelRatio;
     mtxCv.height = window.innerHeight * devicePixelRatio;
+    mtxCv.style.width = window.innerWidth + 'px';
+    mtxCv.style.height = window.innerHeight + 'px';
     mtxCv.classList.add('on');
     var fs = 14 * devicePixelRatio;
     var cols = Math.floor(mtxCv.width / fs);
@@ -2100,6 +2102,10 @@
     var g = pcv.getContext('2d');
     var PW = pcv.width = window.innerWidth * devicePixelRatio;
     var PH = pcv.height = window.innerHeight * devicePixelRatio;
+    /* pin CSS size to the viewport — without this, high-dpr phones render the
+       canvas larger than the screen and the whole scene plays off-screen */
+    pcv.style.width = window.innerWidth + 'px';
+    pcv.style.height = window.innerHeight + 'px';
     var S = Math.min(PW, PH) / 620;
     var cx0 = PW / 2, cy0 = PH / 2 + PH * 0.05;
     var startT = performance.now();
