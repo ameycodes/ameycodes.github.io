@@ -1924,6 +1924,19 @@
       return;
     }
 
+    /* patronus */
+    if (lower === 'devashree' || lower === 'expecto patronum') {
+      if (reduceMotion) {
+        tprint('EXPECTO PATRONUM ✧ — cast quietly (reduced motion). the dementors left without drama.', 't-ok');
+        tprint('— in honor of devashree ✧', 't-vio');
+        return;
+      }
+      tprint('wand ready. happy memory loaded.', 't-dim');
+      tprint('EXPECTO PATRONUM ✧', 't-ok');
+      startPatronus();
+      return;
+    }
+
     /* cat files */
     if (lower.indexOf('cat') === 0) {
       var f = input.slice(3).trim();
@@ -2073,6 +2086,534 @@
       }
     }, reduceMotion ? 1000 : 40);
     if (reduceMotion) { clearInterval(iv); mtxCv.classList.remove('on'); mtxOn = false; tprint('(matrix rain skipped — reduced motion is on. the machines respect that.)', 't-dim'); }
+  }
+
+  /* ---------- patronus easter egg ---------- */
+  var patronusOn = false;
+  function startPatronus() {
+    if (patronusOn) return;
+    patronusOn = true;
+    var pcv = document.createElement('canvas');
+    pcv.style.cssText = 'position:fixed;inset:0;z-index:95;cursor:pointer;';
+    pcv.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(pcv);
+    var g = pcv.getContext('2d');
+    var PW = pcv.width = window.innerWidth * devicePixelRatio;
+    var PH = pcv.height = window.innerHeight * devicePixelRatio;
+    var S = Math.min(PW, PH) / 620;
+    var cx0 = PW / 2, cy0 = PH / 2 + PH * 0.05;
+    var startT = performance.now();
+    var rings = [], sparks = [];
+    var lastRing = 0;
+    var done = false;
+
+    var dems = [];
+    for (var i = 0; i < 5; i++) {
+      dems.push({
+        ang: (i / 5) * 6.2832 + Math.random() * 0.8,
+        dist: Math.max(PW, PH) * (0.55 + Math.random() * 0.15),
+        vel: 0,
+        wob: Math.random() * 6.2832,
+        gone: false
+      });
+    }
+
+    /* soft-particle sprites — smoke is drawn from these, never from hard paths */
+    function softSprite(color) {
+      var sc = document.createElement('canvas');
+      sc.width = sc.height = 64;
+      var sg = sc.getContext('2d');
+      var rg = sg.createRadialGradient(32, 32, 0, 32, 32, 32);
+      rg.addColorStop(0, color);
+      rg.addColorStop(0.55, color.replace(',1)', ',0.5)'));
+      rg.addColorStop(1, color.replace(',1)', ',0)'));
+      sg.fillStyle = rg;
+      sg.fillRect(0, 0, 64, 64);
+      return sc;
+    }
+    var spFog = softSprite('rgba(118,148,198,1)');
+    function blob(sp, x, y, r, a) {
+      g.globalAlpha = a;
+      g.drawImage(sp, x - r, y - r, r * 2, r * 2);
+    }
+
+    function cleanup(skipped) {
+      if (done) return;
+      done = true;
+      patronusOn = false;
+      document.removeEventListener('keydown', onKey, true);
+      pcv.remove();
+      tprint(skipped ? 'patronus dismissed early. the magic understands.' : 'the dementors have fled. the station stands protected.', 't-ok');
+      tprint('— cast in honor of devashree ✧', 't-vio');
+      scrollTerm();
+    }
+    function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); cleanup(true); } }
+    pcv.addEventListener('click', function () { cleanup(true); });
+    document.addEventListener('keydown', onKey, true);
+
+    /* timeline: cold gathers → stag walks in → stops, stares → dementors close in → vibrating rings → orb → ascend */
+    var T_ENTER = 1000, T_ARRIVE = 3800, T_TURN = 4500, T_RINGS = 5600, T_COLLAPSE = 10300, T_ORB = 11100, T_END = 12100, T_FADE = 12500;
+    var wisps = [];
+
+    function seg(x1, y1, x2, y2, w) {
+      g.lineWidth = w;
+      g.beginPath();
+      g.moveTo(x1, y1);
+      g.lineTo(x2, y2);
+      g.stroke();
+    }
+
+    /* one full stag in local units (origin at barrel center, facing +x), transform applied by caller */
+    function stagShape(walkW, phase, turnP, now) {
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+
+      /* --- legs (behind body) — diagonal gait, anatomy with hind hock --- */
+      var legs = [
+        { front: true,  x: 25,  y: 2,  ph: 0,       far: false },
+        { front: true,  x: 33,  y: 0,  ph: Math.PI, far: true  },
+        { front: false, x: -30, y: 2,  ph: Math.PI, far: false },
+        { front: false, x: -38, y: 0,  ph: 0,       far: true  }
+      ];
+      for (var L = 0; L < 4; L++) {
+        var lg = legs[L];
+        var sw = Math.sin(phase + lg.ph) * 0.42 * walkW;
+        var lift = Math.max(0, Math.sin(phase + lg.ph + 0.6)) * 0.8 * walkW;
+        if (lg.far) { g.save(); g.globalAlpha = g.globalAlpha * 0.62; }
+        if (lg.front) {
+          var a1 = sw;
+          var kx = lg.x + Math.sin(a1) * 18, ky = lg.y + Math.cos(a1) * 18;
+          var a2 = a1 - lift * 0.9;
+          var fx = kx + Math.sin(a2) * 20, fy = ky + Math.cos(a2) * 20;
+          seg(lg.x, lg.y, kx, ky, 6.5);
+          seg(kx, ky, fx, fy, 4);
+        } else {
+          var b1 = -0.3 + sw * 0.9;
+          var sx2 = lg.x + Math.sin(b1) * 15, sy2 = lg.y + Math.cos(b1) * 15;
+          var b2 = 0.62 - sw * 0.35;
+          var hx2 = sx2 - Math.sin(b2) * 13, hy2 = sy2 + Math.cos(b2) * 13;
+          var b3 = sw * 0.7 - lift * 0.5;
+          var fx2 = hx2 + Math.sin(b3) * 19, fy2 = hy2 + Math.cos(b3) * 19;
+          seg(lg.x, lg.y, sx2, sy2, 8);
+          seg(sx2, sy2, hx2, hy2, 5.5);
+          seg(hx2, hy2, fx2, fy2, 3.6);
+        }
+        if (lg.far) g.restore();
+      }
+
+      /* --- body: bezier silhouette (chest, belly, flank, rump, back, withers) --- */
+      g.beginPath();
+      g.moveTo(36, -30);
+      g.bezierCurveTo(46, -22, 48, -6, 43, 8);
+      g.bezierCurveTo(30, 14, 8, 15, -12, 13);
+      g.bezierCurveTo(-28, 12, -40, 8, -45, -2);
+      g.bezierCurveTo(-50, -12, -49, -22, -44, -27);
+      g.bezierCurveTo(-30, -33, -8, -31, 8, -31);
+      g.bezierCurveTo(18, -31, 28, -33, 36, -30);
+      g.closePath();
+      g.fill();
+
+      /* --- neck, tapering into the head attach --- */
+      g.beginPath();
+      g.moveTo(26, -26);
+      g.bezierCurveTo(33, -33, 40, -47, 43, -61);
+      g.lineTo(53, -57);
+      g.bezierCurveTo(48, -44, 44, -33, 40, -22);
+      g.closePath();
+      g.fill();
+
+      /* --- tail --- */
+      seg(-46, -24, -53, -30, 5);
+
+      /* --- head: profile fades out as the front (staring) head fades in --- */
+      var baseA = g.globalAlpha;
+      g.save();
+      g.translate(48, -62);
+
+      if (turnP < 0.99) {
+        g.globalAlpha = baseA * (1 - turnP);
+        /* profile head */
+        g.beginPath();
+        g.moveTo(-3, -6);
+        g.quadraticCurveTo(8, -11, 15, -6);
+        g.quadraticCurveTo(23, -2, 27, 3);
+        g.quadraticCurveTo(22, 7, 14, 6);
+        g.quadraticCurveTo(4, 8, -3, 2);
+        g.closePath();
+        g.fill();
+        /* ear swept back */
+        g.beginPath();
+        g.moveTo(-2, -7);
+        g.quadraticCurveTo(-10, -14, -15, -21);
+        g.quadraticCurveTo(-8, -14, -1, -9);
+        g.closePath();
+        g.fill();
+        /* profile antlers — near and far beam, tapering, tined */
+        for (var ab = 0; ab < 2; ab++) {
+          var ox2 = ab === 0 ? 2 : -3;
+          if (ab === 1) { g.save(); g.globalAlpha = baseA * (1 - turnP) * 0.6; }
+          seg(ox2 + 2, -8, ox2 - 3, -22, 2.8);
+          seg(ox2 - 3, -22, ox2 - 2, -35, 2.2);
+          seg(ox2 - 2, -35, ox2 + 5, -46, 1.7);
+          seg(ox2 + 2, -9, ox2 + 9, -15, 1.7);   /* brow tine */
+          seg(ox2 - 3, -22, ox2 + 5, -27, 1.5);
+          seg(ox2 - 2, -35, ox2 + 6, -38, 1.3);
+          seg(ox2 + 5, -46, ox2 + 10, -52, 1.2); /* crown fork */
+          seg(ox2 + 5, -46, ox2 - 1, -53, 1.2);
+          if (ab === 1) g.restore();
+        }
+        /* eye */
+        g.beginPath();
+        g.arc(9, -3, 1.7, 0, 6.2832);
+        g.fillStyle = 'rgba(255,255,255,0.95)';
+        g.fill();
+      }
+
+      if (turnP > 0.01) {
+        g.globalAlpha = baseA * turnP;
+        g.fillStyle = g.strokeStyle;
+        /* front-facing head */
+        g.beginPath();
+        g.moveTo(0, -12);
+        g.quadraticCurveTo(7, -10, 6.4, 0);
+        g.quadraticCurveTo(5.6, 10, 0, 13.5);
+        g.quadraticCurveTo(-5.6, 10, -6.4, 0);
+        g.quadraticCurveTo(-7, -10, 0, -12);
+        g.closePath();
+        g.fill();
+        /* ears out to the sides */
+        g.beginPath();
+        g.moveTo(-5.5, -8);
+        g.quadraticCurveTo(-15, -15, -19.5, -11);
+        g.quadraticCurveTo(-14, -4, -5.5, -5);
+        g.closePath();
+        g.fill();
+        g.beginPath();
+        g.moveTo(5.5, -8);
+        g.quadraticCurveTo(15, -15, 19.5, -11);
+        g.quadraticCurveTo(14, -4, 5.5, -5);
+        g.closePath();
+        g.fill();
+        /* symmetric antlers, beams curving outward with tines */
+        for (var sd = -1; sd <= 1; sd += 2) {
+          seg(sd * 3.5, -11, sd * 11, -20, 2.8);
+          seg(sd * 11, -20, sd * 14.5, -32, 2.2);
+          seg(sd * 14.5, -32, sd * 10, -44, 1.7);
+          seg(sd * 4.5, -13, sd * 10.5, -13.5, 1.7);
+          seg(sd * 11, -20, sd * 18, -24, 1.5);
+          seg(sd * 14.5, -32, sd * 21, -34, 1.3);
+          seg(sd * 10, -44, sd * 14, -50, 1.2);
+          seg(sd * 10, -44, sd * 4.5, -50.5, 1.2);
+        }
+        /* eyes — the stare */
+        var blink = (now % 2600) < 130 ? 0.15 : 1;
+        g.save();
+        g.globalAlpha = baseA * turnP * blink;
+        g.shadowColor = 'rgba(255,255,255,1)';
+        g.shadowBlur = 9 * devicePixelRatio;
+        g.fillStyle = 'rgba(255,255,255,0.98)';
+        g.beginPath();
+        g.arc(-3.4, -1.5, 1.55, 0, 6.2832);
+        g.fill();
+        g.beginPath();
+        g.arc(3.4, -1.5, 1.55, 0, 6.2832);
+        g.fill();
+        g.restore();
+        /* muzzle tip */
+        g.beginPath();
+        g.arc(0, 10.6, 1.6, 0, 6.2832);
+        g.fill();
+      }
+      g.restore();
+      g.globalAlpha = baseA;
+    }
+
+    function drawStagPass(px, py, walkW, phase, turnP, now, blur, style, breathe) {
+      g.save();
+      g.translate(px, py);
+      g.scale(S, S * breathe);
+      g.shadowColor = 'rgba(140,190,255,0.9)';
+      g.shadowBlur = blur;
+      g.strokeStyle = style;
+      g.fillStyle = style;
+      stagShape(walkW, phase, turnP, now);
+      g.restore();
+    }
+
+    function frame(now) {
+      if (done) return;
+      var t = now - startT;
+      g.clearRect(0, 0, PW, PH);
+
+      /* the world goes dark and cold — full scrim so the wraiths read over page content */
+      var vin = t < 1200 ? t / 1200 : t > T_END ? Math.max(0, 1 - (t - T_END) / (T_FADE - T_END)) : 1;
+      g.fillStyle = 'rgba(4,6,10,' + (0.6 * vin) + ')';
+      g.fillRect(0, 0, PW, PH);
+      var vg = g.createRadialGradient(cx0, cy0, Math.min(PW, PH) * 0.25, cx0, cy0, Math.max(PW, PH) * 0.75);
+      vg.addColorStop(0, 'rgba(4,6,10,0)');
+      vg.addColorStop(1, 'rgba(3,5,9,' + (0.5 * vin) + ')');
+      g.fillStyle = vg;
+      g.fillRect(0, 0, PW, PH);
+
+      /* dementors — hooded wraiths with cold rim light, closing in until repelled */
+      for (var i2 = 0; i2 < dems.length; i2++) {
+        var d = dems[i2];
+        if (d.gone) continue;
+        var target = Math.min(PW, PH) * 0.20;
+        if (t < T_COLLAPSE && d.vel === 0 && d.dist > target) d.dist -= Math.min(d.dist - target, 2.8 * S);
+        d.dist += d.vel * 16;
+        if (d.vel > 0) d.vel *= 1.035;
+        if (d.dist > Math.max(PW, PH)) { d.gone = true; continue; }
+        var dx = cx0 + Math.cos(d.ang) * d.dist;
+        var dy = cy0 + Math.sin(d.ang) * d.dist * 0.7 + Math.sin(now / 600 + d.wob) * 10 * S;
+        var sway = Math.sin(now / 900 + d.wob) * 0.05;
+        var DS = S * 1.5;
+        var toC = Math.atan2(cy0 - dy, cx0 - dx);
+        var rimX = Math.cos(toC), rimY = Math.sin(toC);
+
+        /* moonlit fog bank behind the wraith — the black figure silhouettes against it */
+        g.save();
+        g.globalCompositeOperation = 'lighter';
+        blob(spFog, dx, dy - 10 * DS, 120 * DS, 0.14);
+        blob(spFog, dx + rimX * -14 * DS, dy - 26 * DS, 62 * DS, 0.11);
+        g.restore();
+        g.globalAlpha = 1;
+
+        g.save();
+        g.translate(dx, dy);
+        g.rotate(sway);
+        g.shadowColor = 'rgba(0,0,0,0.9)';
+        g.shadowBlur = 5 * devicePixelRatio; /* soft cloth edges — no cartoon outline */
+        var INK = 'rgba(2,4,8,0.97)';
+        var lean = rimX * 3 + Math.sin(now / 740 + d.wob) * 1.5;
+
+        /* hood: a leaning cowl, the most solid thing about it */
+        g.fillStyle = INK;
+        g.beginPath();
+        g.moveTo(lean * 1.4 * DS, -66 * DS);
+        g.bezierCurveTo((lean + 9) * DS, -60 * DS, 12 * DS, -50 * DS, 13 * DS, -38 * DS);
+        g.lineTo(-13 * DS, -38 * DS);
+        g.bezierCurveTo(-12 * DS, -50 * DS, (lean - 9) * DS, -60 * DS, lean * 1.4 * DS, -66 * DS);
+        g.closePath();
+        g.fill();
+
+        /* hunched shoulders and chest mass */
+        g.beginPath();
+        g.moveTo(-13 * DS, -40 * DS);
+        g.bezierCurveTo(-24 * DS, -32 * DS, -22 * DS, -12 * DS, -16 * DS, 0);
+        g.lineTo(16 * DS, 0);
+        g.bezierCurveTo(22 * DS, -12 * DS, 24 * DS, -32 * DS, 13 * DS, -40 * DS);
+        g.closePath();
+        g.fill();
+
+        /* the cloak streams down in ragged tapering ribbons that dissolve mid-air */
+        for (var rb = 0; rb < 9; rb++) {
+          var fr = rb / 8;
+          var bx = (-15 + 30 * fr) * DS;
+          var len = (46 + Math.sin(d.wob * 3 + rb * 2.7) * 14 + (rb % 3) * 14) * DS;
+          var wv1 = Math.sin(now / (300 + rb * 40) + d.wob + rb * 1.7) * (5 + 9.6 * fr * (1 - fr)) * DS * 0.6;
+          var wv2 = Math.sin(now / (210 + rb * 55) + d.wob * 2 + rb * 2.3) * (9 + (rb % 4) * 3) * DS * 0.7;
+          var w0 = (3 + (rb % 3)) * DS;
+          var rgrad = g.createLinearGradient(0, -4 * DS, 0, len);
+          rgrad.addColorStop(0, 'rgba(2,4,8,0.97)');
+          rgrad.addColorStop(0.6, 'rgba(2,4,8,0.8)');
+          rgrad.addColorStop(1, 'rgba(2,4,8,0)');
+          g.fillStyle = rgrad;
+          g.beginPath();
+          g.moveTo(bx - w0, -6 * DS);
+          g.quadraticCurveTo(bx + wv1 - w0 * 0.6, len * 0.5, bx + wv2 - 1.2, len);
+          g.lineTo(bx + wv2 + 1.2, len);
+          g.quadraticCurveTo(bx + wv1 + w0 * 0.6, len * 0.5, bx + w0, -6 * DS);
+          g.closePath();
+          g.fill();
+        }
+
+        /* the face: an absence, deeper than the cloth, turned toward the light */
+        g.shadowBlur = 0;
+        g.fillStyle = 'rgba(0,0,0,0.96)';
+        g.beginPath();
+        g.ellipse(rimX * 4.5 * DS, (-48 + rimY * 2) * DS, 6.5 * DS, 9.5 * DS, rimX * 0.15, 0, 6.2832);
+        g.fill();
+
+        /* moonlit rim tracing hood and shoulder on the patronus side */
+        g.save();
+        g.globalCompositeOperation = 'lighter';
+        g.strokeStyle = 'rgba(170,205,250,0.42)';
+        g.lineWidth = 1.6 * devicePixelRatio;
+        g.shadowColor = 'rgba(150,190,245,0.9)';
+        g.shadowBlur = 9 * devicePixelRatio;
+        var sd2 = rimX >= 0 ? 1 : -1;
+        g.beginPath();
+        g.moveTo(lean * 1.4 * DS, -65 * DS);
+        g.bezierCurveTo(sd2 * 10 * DS, -58 * DS, sd2 * 13 * DS, -48 * DS, sd2 * 13.5 * DS, -38 * DS);
+        g.bezierCurveTo(sd2 * 23 * DS, -30 * DS, sd2 * 22 * DS, -14 * DS, sd2 * 17 * DS, -2 * DS);
+        g.stroke();
+        g.restore();
+
+        /* one gaunt arm reaching toward the light */
+        var ax0 = rimX * 12 * DS, ay0 = -14 * DS;
+        var reach = (32 + Math.sin(now / 700 + d.wob) * 5) * DS;
+        var hxx = ax0 + rimX * reach;
+        var hyy = ay0 + rimY * reach * 0.5 + 7 * DS + Math.sin(now / 460 + d.wob) * 2 * DS;
+        g.shadowColor = 'rgba(0,0,0,0.9)';
+        g.shadowBlur = 4 * devicePixelRatio;
+        g.fillStyle = INK;
+        g.beginPath();
+        g.moveTo(ax0, ay0 - 4.5 * DS);
+        g.quadraticCurveTo((ax0 + hxx) / 2, (ay0 + hyy) / 2 - 6 * DS, hxx, hyy - 1.2 * DS);
+        g.lineTo(hxx, hyy + 1.2 * DS);
+        g.quadraticCurveTo((ax0 + hxx) / 2, (ay0 + hyy) / 2 + 5 * DS, ax0, ay0 + 5 * DS);
+        g.closePath();
+        g.fill();
+        g.shadowBlur = 0;
+        /* skeletal fingers, faintly lit by the stag */
+        g.strokeStyle = 'rgba(175,200,235,0.55)';
+        g.lineWidth = 1.2 * devicePixelRatio;
+        g.lineCap = 'round';
+        for (var f4 = -1; f4 <= 1; f4++) {
+          var fa = toC + f4 * 0.32 - sway;
+          g.beginPath();
+          g.moveTo(hxx, hyy);
+          g.quadraticCurveTo(
+            hxx + Math.cos(fa) * 5.5 * DS, hyy + Math.sin(fa) * 5.5 * DS + 2 * DS,
+            hxx + Math.cos(fa) * 10 * DS, hyy + Math.sin(fa) * 10 * DS + 3.5 * DS
+          );
+          g.stroke();
+        }
+
+        g.restore();
+        g.globalAlpha = 1;
+      }
+
+      if (t >= T_ENTER) {
+        g.save();
+        g.globalCompositeOperation = 'lighter';
+
+        /* the stag walks in from off-screen and decelerates to a stop at center */
+        var startX = -140 * S;
+        var p = Math.min((t - T_ENTER) / (T_ARRIVE - T_ENTER), 1);
+        var e = 1 - Math.pow(1 - p, 1.7);
+        var stagX = startX + (cx0 - startX) * e;
+        var stagY = cy0;
+        var fadeIn = Math.min((t - T_ENTER) / 600, 1);
+        var collapseP = t > T_COLLAPSE ? Math.min((t - T_COLLAPSE) / (T_ORB - T_COLLAPSE), 1) : 0;
+        var stagAlpha = fadeIn * (1 - collapseP);
+        var walkW = t < T_ARRIVE ? 1 : Math.max(0, 1 - (t - T_ARRIVE) / 650);
+        var phase = (stagX - startX) / (26 * S); /* stride tied to distance — no foot-sliding */
+        var tp = Math.min(Math.max((t - (T_ARRIVE + 150)) / (T_TURN - T_ARRIVE - 150), 0), 1);
+        var turnP = tp * tp * (3 - 2 * tp);
+        var breathe = 1 + 0.012 * Math.sin(now / 850) * turnP;
+        var chestY = stagY - 12 * S;
+
+        /* vibrating aura rings — held back until the dementors are close, then blazing */
+        if (t >= T_RINGS && t < T_COLLAPSE - 300 && now - lastRing > 720) {
+          rings.push(now);
+          lastRing = now;
+        }
+        for (var r2 = rings.length - 1; r2 >= 0; r2--) {
+          var rr = (now - rings[r2]) * 0.42;
+          var ralpha = Math.max(0, 1 - rr / (Math.max(PW, PH) * 0.6));
+          if (ralpha <= 0) { rings.splice(r2, 1); continue; }
+          var wob = Math.sin(now / 26 + r2 * 1.7) * 2.4 * S;
+          var shimmer = 0.82 + 0.18 * Math.sin(now / 42 + r2 * 3.1);
+          g.shadowColor = 'rgba(150,200,255,0.95)';
+          g.shadowBlur = 16 * devicePixelRatio;
+          g.strokeStyle = 'rgba(170,212,255,' + (0.75 * ralpha * shimmer) + ')';
+          g.lineWidth = 3.6 * devicePixelRatio;
+          g.beginPath();
+          g.arc(stagX, chestY, Math.max(1, rr + wob), 0, 6.2832);
+          g.stroke();
+          g.strokeStyle = 'rgba(255,255,255,' + (0.5 * ralpha * shimmer) + ')';
+          g.lineWidth = 1.6 * devicePixelRatio;
+          g.beginPath();
+          g.arc(stagX, chestY, Math.max(1, rr * 0.92 + wob * 0.6), 0, 6.2832);
+          g.stroke();
+          g.shadowBlur = 0;
+          for (var i3 = 0; i3 < dems.length; i3++) {
+            var d3 = dems[i3];
+            if (!d3.gone && d3.vel === 0 && Math.abs(d3.dist - rr) < 34 * S) d3.vel = 0.4 * S;
+          }
+        }
+
+        if (stagAlpha > 0.01) {
+          /* light wisps shedding off the spine, like the film patronus */
+          if (Math.random() < 0.75) {
+            var ws = Math.random();
+            wisps.push({
+              x: stagX + (-42 + 86 * ws) * S + (Math.random() - 0.5) * 8 * S,
+              y: stagY + (-28 - 30 * ws) * S,
+              vx: (-0.14 - 0.2 * Math.random()) * S,
+              vy: (-0.2 - 0.3 * Math.random()) * S,
+              born: now,
+              life: 800 + Math.random() * 450
+            });
+          }
+          g.globalAlpha = stagAlpha;
+          var mg = g.createRadialGradient(stagX, stagY - 26 * S, 0, stagX, stagY - 26 * S, 140 * S);
+          mg.addColorStop(0, 'rgba(140,195,255,' + (0.16 + 0.05 * Math.sin(now / 320)) + ')');
+          mg.addColorStop(1, 'rgba(140,195,255,0)');
+          g.fillStyle = mg;
+          g.fillRect(stagX - 150 * S, stagY - 175 * S, 300 * S, 300 * S);
+          /* three glow passes: wide halo, bloom, bright core */
+          drawStagPass(stagX, stagY, walkW, phase, turnP, now, 34 * devicePixelRatio, 'rgba(130,185,255,0.26)', breathe);
+          drawStagPass(stagX, stagY, walkW, phase, turnP, now, 13 * devicePixelRatio, 'rgba(185,218,255,0.5)', breathe);
+          drawStagPass(stagX, stagY, walkW, phase, turnP, now, 5 * devicePixelRatio, 'rgba(234,247,255,0.92)', breathe);
+          g.globalAlpha = 1;
+        }
+
+        for (var w3 = wisps.length - 1; w3 >= 0; w3--) {
+          var wi = wisps[w3];
+          var wage = now - wi.born;
+          if (wage > wi.life) { wisps.splice(w3, 1); continue; }
+          wi.x += wi.vx;
+          wi.y += wi.vy;
+          g.fillStyle = 'rgba(190,225,255,' + (0.26 * (1 - wage / wi.life) * Math.max(stagAlpha, 0.2)) + ')';
+          g.beginPath();
+          g.arc(wi.x, wi.y, (0.9 + Math.random() * 1.1) * devicePixelRatio, 0, 6.2832);
+          g.fill();
+        }
+
+        /* the stag folds into a glowing orb and ascends */
+        if (t >= T_COLLAPSE) {
+          var orbP = Math.min((t - T_COLLAPSE) / (T_ORB - T_COLLAPSE), 1);
+          var ox = stagX, oy = chestY - 14 * S;
+          if (t >= T_ORB) {
+            var aP = Math.min((t - T_ORB) / (T_END - T_ORB), 1);
+            var aE = aP * aP;
+            ox += aE * PW * 0.42;
+            oy -= aE * PH * 0.55;
+            if (Math.random() < 0.5) sparks.push({ x: ox, y: oy, vx: (Math.random() - 0.5) * 0.06, vy: (Math.random() - 0.5) * 0.06 + 0.04, born: now });
+          }
+          var oR = (6 + 10 * orbP) * S * (t >= T_ORB ? Math.max(0.25, 1 - (t - T_ORB) / (T_END - T_ORB) * 0.75) : 1);
+          var og = g.createRadialGradient(ox, oy, 0, ox, oy, oR * 5);
+          og.addColorStop(0, 'rgba(255,255,255,0.95)');
+          og.addColorStop(0.25, 'rgba(190,225,255,0.7)');
+          og.addColorStop(1, 'rgba(150,200,255,0)');
+          g.fillStyle = og;
+          g.beginPath();
+          g.arc(ox, oy, oR * 5, 0, 6.2832);
+          g.fill();
+        }
+
+        for (var s3 = sparks.length - 1; s3 >= 0; s3--) {
+          var sp = sparks[s3];
+          var sage = now - sp.born;
+          if (sage > 700) { sparks.splice(s3, 1); continue; }
+          sp.x += sp.vx * 16 * S;
+          sp.y += sp.vy * 16 * S;
+          g.fillStyle = 'rgba(210,235,255,' + (0.8 * (1 - sage / 700)) + ')';
+          g.beginPath();
+          g.arc(sp.x, sp.y, 1.3 * devicePixelRatio, 0, 6.2832);
+          g.fill();
+        }
+
+        g.restore();
+      }
+
+      if (t >= T_FADE) { cleanup(false); return; }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
   }
 
   /* ================= DOCKING SIMULATOR ================= */
